@@ -7,7 +7,9 @@ module MEGS
       REQUIRED_PARAMS = []
 
       # last_roll is intentionally not included here
-      MEGS_KEYS = %i(av ov ov_cs av_index ov_index target total result_cs result_aps)
+      MEGS_KEYS = %i(av ov ov_cs av_index ov_index
+                     ev rv rv_cs ev_index rv_index
+                     target total cs raps).freeze
 
       class << self
         def generate_signature(secret, payload)

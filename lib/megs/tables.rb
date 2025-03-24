@@ -57,15 +57,81 @@ module MEGS
       [:all, 76, 74, 72, 70, 68, 66, 62, 58, 54, 51, 48, 45, 42, 39, 36, 33, 30, 27, 24, 21, 18],
       [:all, 84, 82, 80, 78, 76, 74, 70, 66, 62, 59, 56, 53, 50, 47, 44, 41, 37, 33, 29, 26, 23, 20],
       [:all, 92, 90, 88, 86, 84, 82, 78, 74, 70, 67, 64, 61, 58, 55, 51, 47, 43, 39, 35, 31, 28, 25, 22]
-    ].map { |row| row.nil? ? nil : row + ([nil] * (24 - row.size)) }.freeze
+    ].map { |row| row.nil? ? nil : row + ([0] * (24 - row.size)) }.freeze
 
-    def self.get_index(value)
+    def self.get_range_index(value)
       if value > RANGE_INDEXES.last.max
         extra = ((value - RANGE_INDEXES.last.max) / 10.0).ceil
         MAX_INDEX + extra
       else
         RANGE_INDEXES.index { |x| x.kind_of?(Range) ? x.include?(value) : x == value }
       end
+    end
+
+    def self.get_indexes(x, y, y_mod)
+      indexes = [x, y].map { |v| get_range_index(v) }
+      indexes[1] = (y_mod < 0 && y_mod.abs >= indexes[1]) ? 0 : indexes[1] + y_mod
+      indexes
+    end
+
+    def self.get_effect_indexes(ev, rv, rv_cs)
+      indexes = get_indexes(ev, rv, rv_cs)
+
+      # Handle RV > 100
+      if indexes[1] > MAX_INDEX
+        if indexes[0] == indexes[1]
+          indexes[0] = MAX_INDEX
+          indexes[1] = MAX_INDEX
+        else
+          diff = indexes[1] - MAX_INDEX
+          indexes[1] = MAX_INDEX
+          indexes[0] -= diff
+          indexes[0] = 1 if indexes[0] < 1
+        end
+      end
+
+      # Handle RV < 0 and EV > 100
+      raps_extra = 0
+      if indexes[1] < 0
+        raps_extra = indexes[1].abs
+        indexes[1] = 0
+      elsif indexes[0] > MAX_INDEX
+        raps_extra = (indexes[0] - MAX_INDEX) * 10
+        indexes[0] = MAX_INDEX
+      end
+      [indexes, raps_extra]
+    end
+
+    def self.get_action_indexes(av, ov, ov_cs)
+      indexes = get_indexes(av, ov, ov_cs)
+      indexes[1] = 0 if indexes[1] < 0
+
+      # Handle AV > 100
+      if indexes[0] > MAX_INDEX
+        if indexes[0] == indexes[1]
+          indexes[0] = MAX_INDEX
+          indexes[1] = MAX_INDEX
+        else
+          diff = indexes[0] - MAX_INDEX
+          indexes[0] = MAX_INDEX
+          indexes[1] -= diff
+          indexes[1] = 0 if indexes[1] < 0
+        end
+      end
+
+      # Handle OV > 100
+      target_extra = 0
+      if indexes[1] > MAX_INDEX
+        row_shift = indexes[1] - MAX_INDEX
+        indexes[1] = MAX_INDEX
+        if indexes[0] - row_shift >= 1
+          indexes[0] -= row_shift
+        else
+          target_extra = (row_shift  - (indexes[0] - 1)) * 10
+          indexes[0] = 1
+        end
+      end
+      [indexes, target_extra]
     end
   end
 end

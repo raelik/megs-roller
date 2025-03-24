@@ -17,38 +17,6 @@ module MEGS
         rolls
       end
 
-      def get_indexes(av, ov, ov_cs)
-        indexes = [av, ov].map { |v| Tables.get_index(v) }
-        indexes[1] = (ov_cs < 0 && ov_cs.abs >= indexes[1]) ? 0 : indexes[1] + ov_cs
-
-        # Handle AV > 100
-        if indexes[0] > Tables::MAX_INDEX
-          if indexes[0] == indexes[1]
-            indexes[0] = Tables::MAX_INDEX
-            indexes[1] = Tables::MAX_INDEX
-          else
-            diff = indexes[0] - Tables::MAX_INDEX
-            indexes[0] = Tables::MAX_INDEX
-            indexes[1] -= diff
-            indexes[1] = 0 if indexes[1] < 0
-          end
-        end
-
-        # Handle OV > 100
-        target_extra = 0
-        if indexes[1] > Tables::MAX_INDEX
-          row_shift = indexes[1] - Tables::MAX_INDEX
-          indexes[1] = Tables::MAX_INDEX
-          if indexes[0] - row_shift >= 1
-            indexes[0] -= row_shift
-          else
-            target_extra = (row_shift  - (indexes[0] - 1)) * 10
-            indexes[0] = 1
-          end
-        end
-        [indexes, target_extra]
-      end
-
       def calculate_cs
         cs = 0
         return cs if megs[:target] == megs[:total]
@@ -87,7 +55,7 @@ module MEGS
         av, ov, ov_cs = params.values_at('av','ov','ov_cs').map(&:to_i)
 
         if params['result'] && !new_action?(av, ov, ov_cs) && megs[:total] >= megs[:target]
-          megs[:result_cs] = calculate_cs
+          megs[:cs] = calculate_cs
         else
           dice = roll
           sum  = dice.sum
@@ -98,15 +66,15 @@ module MEGS
           if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1] && last.first != 1
             megs[:total] = (sum == 2) ? 2 : megs[:total] + sum
           else
-            megs[:av]         = av
-            megs[:ov]         = ov
-            megs[:ov_cs]      = ov_cs
-            megs[:total]      = sum
-            megs[:result_cs]  = 0
-            megs[:result_aps] = 0
+            megs[:av]    = av
+            megs[:ov]    = ov
+            megs[:ov_cs] = ov_cs
+            megs[:total] = sum
+            megs[:cs]    = 0
+            megs[:raps]  = 0
 
             # A 2 is an automatic fail. Don't bother with the table.
-            indexes, target_extra = get_indexes(av, ov, ov_cs) if sum != 2
+            indexes, target_extra = Tables.get_action_indexes(av, ov, ov_cs) if sum != 2
             if indexes
               megs[:av_index] = indexes[0]
               megs[:ov_index] = indexes[1]
