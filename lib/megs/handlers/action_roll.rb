@@ -116,9 +116,7 @@ module MEGS
           megs[:last_roll] = dice
         end
 
-        output = megs.to_json
-
-        [200, headers, [output]]
+        [200, headers, [megs.to_json]]
       end
     end
   end

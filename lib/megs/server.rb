@@ -29,6 +29,8 @@ module MEGS
     def call(env)
       handler = validate_request(env)
       handler.call
+    rescue Error => e
+      [e.status, {}, [e.message]]
     end
   end
 end

@@ -15,11 +15,11 @@ module MEGS
         end
 
         def method_allowed?(method)
-          ALLOWED_METHODS.include?(method)
+          self::ALLOWED_METHODS.include?(method)
         end
 
         def missing_params(params)
-          REQUIRED_PARAMS.select { |k| params[k].nil? }
+          params['clear'] ? [] : self::REQUIRED_PARAMS.select { |k| params[k].nil? }
         end
       end
 
@@ -58,12 +58,22 @@ module MEGS
         h
       end
 
+      def delete_cookies(h)
+        %w(sig megs).each { |k| Rack::Utils.delete_cookie_header!(headers, k) }
+      end
+
       def call
-        s, h, b = serve
-        [s, set_cookies(h), b]
+        if params['clear']
+          delete_cookies(headers)
+          [200, headers, [{}.to_json]]
+        else
+          s, h, b = serve
+          set_cookies(h)
+          [s, h, b]
+        end
       rescue Error => e
         headers = {}
-        %w(sig megs).each { |k| Rack::Utils.delete_cookie_header!(headers, k) } if e.status == 401
+        delete_cookies(headers) if e.status == 401
         [e.status, headers, [e.message]]
       end
 
