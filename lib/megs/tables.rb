@@ -70,12 +70,13 @@ module MEGS
 
     def self.get_indexes(x, y, y_mod)
       indexes = [x, y].map { |v| get_range_index(v) }
-      indexes[1] = (y_mod < 0 && y_mod.abs >= indexes[1]) ? 0 : indexes[1] + y_mod
+      indexes[1] = indexes[1] + y_mod
       indexes
     end
 
     def self.get_effect_indexes(ev, rv, rv_cs)
       indexes = get_indexes(ev, rv, rv_cs)
+      puts "EFFECT INDEXES: #{indexes.inspect}"
 
       # Handle RV > 100
       if indexes[1] > MAX_INDEX
@@ -91,15 +92,16 @@ module MEGS
       end
 
       # Handle RV < 0 and EV > 100
-      raps_extra = 0
+      extra_raps = 0
       if indexes[1] < 0
-        raps_extra = indexes[1].abs
+        puts "EXTRA: #{indexes[1].abs}"
+        extra_raps = indexes[1].abs
         indexes[1] = 0
       elsif indexes[0] > MAX_INDEX
-        raps_extra = (indexes[0] - MAX_INDEX) * 10
+        extra_raps = (indexes[0] - MAX_INDEX) * 10
         indexes[0] = MAX_INDEX
       end
-      [indexes, raps_extra]
+      [indexes, extra_raps]
     end
 
     def self.get_action_indexes(av, ov, ov_cs)
