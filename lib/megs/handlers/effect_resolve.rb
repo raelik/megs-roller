@@ -11,7 +11,7 @@ module MEGS
         megs[:rv]    = rv
         megs[:rv_cs] = rv_cs
 
-        if megs[:cs] && megs[:total] >= megs[:target]
+        if !megs[:success].nil? && megs[:success]
           cs = megs[:cs] + megs[:rv_cs]
           indexes, extra_raps = Tables.get_effect_indexes(ev, rv, cs)
           megs[:ev_index] = indexes[0]

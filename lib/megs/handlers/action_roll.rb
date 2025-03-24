@@ -46,39 +46,43 @@ module MEGS
           cs += ((megs[:total] - 120) / 10.0).ceil if megs[:total] > 120
         end
 
-        # Return the column shifts as a negative, since they become a bonus for
-        # determining Result APs
+        # Return the column shifts as a negative, since they are applied as a penalty
+        # to the RV.
         return cs * -1
       end
 
       def serve
         av, ov, ov_cs = params.values_at('av','ov','ov_cs').map(&:to_i)
 
-        if params['result'] && !new_action?(av, ov, ov_cs) && megs[:total] >= megs[:target]
-          megs[:cs] = calculate_cs
+        if params['result'] && !new_action?(av, ov, ov_cs)
+          megs[:success] = megs[:total] >= megs[:target]
+          megs[:cs] = calculate_cs if megs[:success]
         else
           dice = roll
           sum  = dice.sum
           last = megs[:last_roll]
 
-          # Only accept reroll requests if the action params haven't changes,
-          # doubles were rolled, and the roll wasn't a 2.
-          if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1] && last.first != 1
-            megs[:total] = (sum == 2) ? 2 : megs[:total] + sum
+          # 2 is ALWAYS an automatic fail, even on a reroll.
+          if sum == 2
+            megs[:success] = false
           else
-            megs[:av]    = av
-            megs[:ov]    = ov
-            megs[:ov_cs] = ov_cs
-            megs[:total] = sum
-            megs[:cs]    = 0
-            megs[:raps]  = 0
+            # Only accept reroll requests if the action params haven't changes and doubles were rolled.
+            if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]
+              megs[:total] = megs[:total] + sum
+            else
+              megs[:av]    = av
+              megs[:ov]    = ov
+              megs[:ov_cs] = ov_cs
+              megs[:total] = sum
+              megs[:cs]    = 0
+              megs[:raps]  = 0
 
-            # A 2 is an automatic fail. Don't bother with the table.
-            indexes, target_extra = Tables.get_action_indexes(av, ov, ov_cs) if sum != 2
-            if indexes
-              megs[:av_index] = indexes[0]
-              megs[:ov_index] = indexes[1]
-              megs[:target]   = Tables::ACTION_TABLE[indexes[0]][indexes[1]] + target_extra
+              indexes, target_extra = Tables.get_action_indexes(av, ov, ov_cs)
+              if indexes
+                megs[:av_index] = indexes[0]
+                megs[:ov_index] = indexes[1]
+                megs[:target]   = Tables::ACTION_TABLE[indexes[0]][indexes[1]] + target_extra
+              end
             end
           end
           megs[:last_roll] = dice

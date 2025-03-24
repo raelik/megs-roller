@@ -1,11 +1,17 @@
+@media only screen and (min-width: 500px) {
+  body {
+    width: 500px;
+  }
+}
+
 body {
-  margin: 10px;
+  padding: 5px;
 }
 
 html, button, input, select, textarea,
 .pure-g [class *= "pure-u"] {
   /* Set your content font stack here: */
-  font-size: 14px;
+  font-size: 16px;
   font-weight: normal;
   font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
 }
@@ -14,102 +20,20 @@ a.pure-button {
   margin: 5px;
 }
 
-.modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: hidden; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
-
-.modal-content {
-  position: fixed;
-  background-color: #fefefe;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 30%; /* Could be more or less, depending on screen size */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.modal-expanded {
-  width: 80%;
-  height: 80%;
-}
-
 .centered {
   text-align: center;
 }
 
-tr.stopping td {
-  background-color: #fcf08c !important;
+.right-buttons a {
+  margin-right: 10px;
 }
 
-td.actions {
-  text-align: center;
-  padding: 2px;
+input[type="text"] {
+  margin-top: 5px;
+  margin-bottom: 10px;
 }
 
-#dialog {
-  height: 99%;
-  min-height: 0;
-}
-
-#dialog > div.right {
-  text-align: right;
-}
-
-#dialog > div.dialog-title {
-  min-height: 51px;
-  height: 5%;
-  text-align: center;
-}
-
-#dialog > div.dialog-buttons {
-  min-height: 44px;
-  height: 5%;
-  padding: 10px 0px 10px 0px;
-  text-align: center;
-}
-
-#dialog div#killText {
-  height: 90%;
-}
-
-#dialog div#killText .pure-g {
-  height: 99%;
-  min-height: 0;
-  overflow: auto;
-}
-
-#dialog div#killText .pure-u-1-1 {
-  height: 100%;
-}
-
-#dialog #killText pre {
-  height: 100%;
-}
-
-div.view [class *= "pure-u-1-"] {
-  margin: 5px 0 5px 0;
-}
-
-div.view .pure-u-1-1.wide table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-div.view .pure-u-1-1.wide table td {
-  width: 100%;
-}
-
-div.scroll {
-  width: 100%;
-  overflow: auto;
+span.centered {
+  line-height: 50%;
+  vertical-align: middle;
 }
