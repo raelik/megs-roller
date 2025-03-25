@@ -8,7 +8,8 @@ module MEGS
   class Server
     VALID_PATHS = {
       '/action_roll' => Handlers::ActionRoll,
-      '/effect_resolve' => Handlers::EffectResolve
+      '/effect_resolve' => Handlers::EffectResolve,
+      '/health' => Handlers::HealthCheck
     }.freeze
 
     attr_reader :config

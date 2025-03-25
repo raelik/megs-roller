@@ -18,5 +18,9 @@ jobs:
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
           heroku_app_name: "megs-roller"
           heroku_email: "raelik@gmail.com"
+          healthcheck: "https://megs-roller-b10c3de2770b.herokuapp.com/health"
+          checkstring: "ok"
+          delay: 5
+          rollbackonhealthcheckfailed: true
         env:
           HD_MEGS_SECRET: ${{secrets.MEGS_SECRET}}
