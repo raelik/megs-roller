@@ -127,7 +127,7 @@ var ActionDataView = {
   view: function(e) {
     var data = Action.data
     return Object.keys(data).length === 0 ? [] : [
-      m(".pure-u-1-3.centered", "Total: "+data.total, m("br"), "Last: "+data.last_roll.join(', ')),
+      m(".pure-u-1-3.centered", "Total: "+data.total, m("br"), "Dice: "+data.last_roll.join(', ')),
       m(".pure-u-1-3.centered", "Target: "+data.target),
       m(".pure-u-1-3.centered", "CS: "+data.cs),
     ]
