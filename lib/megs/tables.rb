@@ -76,7 +76,6 @@ module MEGS
 
     def self.get_effect_indexes(ev, rv, rv_cs)
       indexes = get_indexes(ev, rv, rv_cs)
-      puts "EFFECT INDEXES: #{indexes.inspect}"
 
       # Handle RV > 100
       if indexes[1] > MAX_INDEX
@@ -94,7 +93,6 @@ module MEGS
       # Handle RV < 0 and EV > 100
       extra_raps = 0
       if indexes[1] < 0
-        puts "EXTRA: #{indexes[1].abs}"
         extra_raps = indexes[1].abs
         indexes[1] = 0
       elsif indexes[0] > MAX_INDEX
