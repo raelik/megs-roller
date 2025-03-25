@@ -24,6 +24,12 @@ var Action = {
   do_resolve: function() {
     Action.resolved = Action.has_data() && Action.data.success ? true : false
   },
+  handle_two: function(data) {
+    if(data.success == false && data.total == 2) {
+      Action.data.target = data.target || ''
+      Action.data.cs = ''
+    }
+  },
   get_action_fields: function() {
     var av    = document.getElementById('av')
     var ov    = document.getElementById('ov')
@@ -61,7 +67,7 @@ var Action = {
       params.reroll = true
     }
 
-    Action.do_get_request('/action_roll', params)
+    Action.do_get_request('/action_roll', params, Action.handle_two)
   },
   result: function(e) {
     var params = Action.get_action_fields()

@@ -65,6 +65,7 @@ module MEGS
           # 2 is ALWAYS an automatic fail, even on a reroll.
           if sum == 2
             megs[:success] = false
+            megs[:total] = sum
           else
             # Only accept reroll requests if the action params haven't changes and doubles were rolled.
             if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]

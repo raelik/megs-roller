@@ -1,5 +1,5 @@
 import { Action, ActionClearButton, ActionRollButtons,
-	 ActionDataView, ActionResolvedView } from "/js/action.js"
+   ActionDataView, ActionResolvedView } from "/js/action.js"
 
 var Main = {
   action: Action,
@@ -10,6 +10,13 @@ var Main = {
       viewport.content = 'initial-scale=1';
       viewport.content = 'width=device-width';
     }
+  },
+  text_field_attrs: function(id) {
+    return { id: id, type: 'text', size: 3, minlength: 1, maxlength: 3 }
+  },
+  action_field_attrs: function(id) {
+    var attrs = Main.text_field_attrs(id)
+    return Object.assign(attrs, (!Action.has_data() || Action.data.success === undefined) ? {} : { disabled: true })
   },
   result_style: function() {
     var style = !Action.has_data() || Action.data.success === undefined ? "display: none" : ""
@@ -30,6 +37,7 @@ var Main = {
     return Action.has_data() && Action.data.success ? "" : "display: none"
   },
   view: function(e) {
+    var check = Main.check_action_field
     return [ m(".pure-g",
       m(".pure-u-1-4.centered", m(ActionClearButton)),
       m(".pure-u-1-2.centered", m("h2", "MEGS Dice Roller")),
@@ -40,9 +48,9 @@ var Main = {
         m(".pure-u-1-3.centered", "OV CS"),
       ),
       m(".pure-u-5-5",
-        m(".pure-u-1-3.centered", m("input", { type: 'text', id: 'av', size: 3, minlength: 1, maxlength: 3 })),
-        m(".pure-u-1-3.centered", m("input", { type: 'text', id: 'ov', size: 3, minlength: 1, maxlength: 3 })),
-        m(".pure-u-1-3.centered", m("input", { type: 'text', id: 'ov_cs', size: 3, minlength: 1, maxlength: 3 })),
+        m(".pure-u-1-3.centered", m("input", Main.action_field_attrs('av'))),
+        m(".pure-u-1-3.centered", m("input", Main.action_field_attrs('ov'))),
+        m(".pure-u-1-3.centered", m("input", Main.action_field_attrs('ov_cs')))
       ),
       m(".pure-u-5-5", { style: "margin-bottom: 10px" }, m(ActionDataView)),
       m(".pure-u-5-5", { style: Main.result_style() }, Main.result_text()),
@@ -52,9 +60,9 @@ var Main = {
         m(".pure-u-1-3.centered", "RV CS"),
       ),
       m(".pure-u-5-5", { style: Main.resolve_style() },
-        m(".pure-u-1-3.centered", m("input", { type: 'text', id: 'ev', size: 3, minlength: 1, maxlength: 3 })),
-        m(".pure-u-1-3.centered", m("input", { type: 'text', id: 'rv', size: 3, minlength: 1, maxlength: 3 })),
-        m(".pure-u-1-3.centered", m("input", { type: 'text', id: 'rv_cs', size: 3, minlength: 1, maxlength: 3 })),
+        m(".pure-u-1-3.centered", m("input", Main.text_field_attrs('ev'))),
+        m(".pure-u-1-3.centered", m("input", Main.text_field_attrs('rv'))),
+        m(".pure-u-1-3.centered", m("input", Main.text_field_attrs('rv_cs')))
       ),
       m(ActionResolvedView)
     )]
