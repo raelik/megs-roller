@@ -1,9 +1,4 @@
-var Action = {
-  data: {},
-  resolved: false,
-  has_data: function() {
-    return Object.keys(Action.data).length !== 0
-  },
+var Util = {
   show_roll: function() {
     return !Action.data.last_roll
   },
@@ -19,16 +14,10 @@ var Action = {
     return Action.has_data() && Action.data.success
   },
   show_break: function() {
-    return (Action.show_roll() || Action.show_reroll()) && (Action.show_submit() || Action.show_resolve())
+    return (Util.show_roll() || Util.show_reroll()) && (Util.show_submit() || Util.show_resolve())
   },
-  do_resolve: function() {
-    Action.resolved = Action.has_data() && Action.data.success ? true : false
-  },
-  handle_two: function(data) {
-    if(data.success == false && data.total == 2) {
-      Action.data.target = data.target || ''
-      Action.data.cs = ''
-    }
+  show_result: function() {
+    return Action.has_data() && Action.data.success !== undefined
   },
   get_action_fields: function() {
     var av    = document.getElementById('av')
@@ -41,6 +30,37 @@ var Action = {
     var rv    = document.getElementById('rv')
     var rv_cs = document.getElementById('rv_cs')
     return { ev: ev.value, rv: rv.value, rv_cs: rv_cs.value }
+  },
+  center_line_height: function(vnode) {
+    var nodes = vnode.dom.parentElement.parentElement.querySelectorAll('span')
+    nodes.forEach((e) => { e.style.removeProperty('line-height') })
+
+    var height = vnode.dom.parentElement.offsetHeight
+    nodes.forEach((e) => {
+      var divisor = Array.from(e.children).filter((e) => { return e.tagName == 'A' }).length
+      e.style.lineHeight = (height / divisor) + "px"
+    })
+  }
+}
+
+var Action = {
+  data: {},
+  resolved: false,
+  has_data: function() {
+    return Object.keys(Action.data).length !== 0
+  },
+  do_resolve: function() {
+    Action.resolved = Action.has_data() && Action.data.success ? true : false
+  },
+  do_clear: function() {
+    ['av','ov','ov_cs','ev','rv','rv_cs'].forEach((id) => { document.getElementById(id).value = '' })
+    Action.resolved = false
+  },
+  handle_two: function(data) {
+    if(data.success == false && data.total == 2) {
+      Action.data.target = data.target || ''
+      Action.data.cs = ''
+    }
   },
   do_get_request: function(url, params, cb) {
     var root = document.body
@@ -62,7 +82,7 @@ var Action = {
   },
   roll: function(e) {
     var reroll = (e.target.id == 'reroll')
-    var params = Action.get_action_fields()
+    var params = Util.get_action_fields()
     if(reroll) {
       params.reroll = true
     }
@@ -70,55 +90,42 @@ var Action = {
     Action.do_get_request('/action_roll', params, Action.handle_two)
   },
   result: function(e) {
-    var params = Action.get_action_fields()
+    var params = Util.get_action_fields()
     params.result = true
 
     Action.do_get_request('/action_roll', params)
   },
   resolve: function(e) {
-    var params = Action.get_effect_fields()
+    var params = Util.get_effect_fields()
 
     Action.do_get_request('/effect_resolve', params, Action.do_resolve)
   },
   clear: function(e) {
     var params = { clear: true }
 
-    Action.do_get_request('/action_roll', params, () => {
-      ['av','ov','ov_cs','ev','rv','rv_cs'].forEach((id) => { document.getElementById(id).value = '' })
-      Action.resolved = false
-    })
+    Action.do_get_request('/action_roll', params, Action.do_clear)
   }
 }
 
-var centerLineHeight = function(vnode) {
-  var nodes = vnode.dom.parentElement.parentElement.querySelectorAll('span')
-  nodes.forEach((e) => { e.style.removeProperty('line-height') })
-
-  var height = vnode.dom.parentElement.offsetHeight
-  nodes.forEach((e) => {
-    var divisor = Array.from(e.children).filter((e) => { return e.tagName == 'A' }).length
-    e.style.lineHeight = (height / divisor) + "px"
-  })
-}
 
 var ActionClearButton = {
-  oncreate: centerLineHeight,
-  onupdate: centerLineHeight,
+  oncreate: Util.center_line_height,
+  onupdate: Util.center_line_height,
   view: function(e) {
     return [ m("span#.centered", m("a.pure-button", { onclick: Action.clear }, "Clear")) ]
   }
 }
 
 var ActionRollButtons = {
-  oncreate: centerLineHeight,
-  onupdate: centerLineHeight,
+  oncreate: Util.center_line_height,
+  onupdate: Util.center_line_height,
   view: function(e) {
     return [ m("span#.centered",
-      Action.show_roll()    ? m("a.pure-button", { id: 'roll',   onclick: Action.roll }, "Roll")   : m("", { style: "display: none" }),
-      Action.show_reroll()  ? m("a.pure-button", { id: 'reroll', onclick: Action.roll }, "Reroll") : m("", { style: "display: none" }),
-      Action.show_break()   ? m("br") : m("", { style: "display: none" }),
-      Action.show_submit()  ? m("a.pure-button", { onclick: Action.result }, "Submit")   : m("", { style: "display: none" }),
-      Action.show_resolve() ? m("a.pure-button", { onclick: Action.resolve }, "Resolve") : m("", { style: "display: none" })
+      Util.show_roll()    ? m("a.pure-button", { id: 'roll',   onclick: Action.roll }, "Roll")   : m("", { style: "display: none" }),
+      Util.show_reroll()  ? m("a.pure-button", { id: 'reroll', onclick: Action.roll }, "Reroll") : m("", { style: "display: none" }),
+      Util.show_break()   ? m("br") : m("", { style: "display: none" }),
+      Util.show_submit()  ? m("a.pure-button", { onclick: Action.result }, "Submit")   : m("", { style: "display: none" }),
+      Util.show_resolve() ? m("a.pure-button", { onclick: Action.resolve }, "Resolve") : m("", { style: "display: none" })
     )]
   }
 }
@@ -140,4 +147,4 @@ var ActionResolvedView = {
 	       "RAPs: " + Action.data.raps) ]
   }
 }
-export { Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView }
+export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView }

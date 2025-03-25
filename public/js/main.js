@@ -1,5 +1,5 @@
-import { Action, ActionClearButton, ActionRollButtons,
-   ActionDataView, ActionResolvedView } from "/js/action.js"
+import { Util, Action, ActionClearButton, ActionRollButtons,
+         ActionDataView, ActionResolvedView } from "/js/action.js"
 
 var Main = {
   action: Action,
@@ -16,25 +16,17 @@ var Main = {
   },
   action_field_attrs: function(id) {
     var attrs = Main.text_field_attrs(id)
-    return Object.assign(attrs, (!Action.has_data() || Action.data.success === undefined) ? {} : { disabled: true })
+    return Object.assign(attrs, Util.show_result() ? { disabled: true } : {})
   },
   result_style: function() {
-    var style = !Action.has_data() || Action.data.success === undefined ? "display: none" : ""
-    if(Action.has_data() && Action.data.success !== undefined) {
-      style = "text-align: center; margin-bottom: 10px; color: white; background-color: " +
-              (Action.data.success ? "green" : "red")
-    }
-    return style
+    return Util.show_result() ? ("text-align: center; margin-bottom: 10px; color: white; background-color: " +
+                                 (Action.data.success ? "green" : "red")) : "display: none"
   },
   result_text: function() {
-    var text = ""
-    if(Action.has_data() && Action.data.success !== undefined) {
-      text = "Action " + (Action.data.success ? "Succeeded!" : "FAILED.")
-    }
-    return text
+    return Util.show_result() ? ("Action " + (Action.data.success ? "Succeeded!" : "FAILED.")) : ""
   },
   resolve_style: function() {
-    return Action.has_data() && Action.data.success ? "" : "display: none"
+    return Util.show_resolve() ? "" : "display: none"
   },
   view: function(e) {
     var check = Main.check_action_field
