@@ -83,7 +83,10 @@ var Action = {
   clear: function(e) {
     var params = { clear: true }
 
-    Action.do_get_request('/action_roll', params, () => { Action.resolved = false })
+    Action.do_get_request('/action_roll', params, () => {
+      ['av','ov','ov_cs','ev','rv','rv_cs'].forEach((id) => { document.getElementById(id).value = '' })
+      Action.resolved = false
+    })
   }
 }
 
