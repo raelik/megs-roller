@@ -57,15 +57,16 @@ module MEGS
         if params['result'] && !new_action?(av, ov, ov_cs)
           megs[:success] = megs[:total] >= megs[:target]
           megs[:cs] = calculate_cs if megs[:success]
-        else
+        elsif megs[:success].nil?
           dice = roll
           sum  = dice.sum
           last = megs[:last_roll]
 
           # 2 is ALWAYS an automatic fail, even on a reroll.
           if sum == 2
-            megs[:success] = false
-            megs[:total] = sum
+            megs[:success]  = false
+            megs[:resolved] = true
+            megs[:total]    = sum
           else
             # Only accept reroll requests if the action params haven't changes and doubles were rolled.
             if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]

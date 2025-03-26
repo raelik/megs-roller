@@ -11,7 +11,7 @@ module MEGS
         megs[:rv]    = rv
         megs[:rv_cs] = rv_cs
 
-        if !megs[:success].nil? && megs[:success]
+        if !megs[:success].nil? && megs[:success] && !megs[:resolved]
           cs = megs[:cs] + megs[:rv_cs]
           indexes, extra_raps = Tables.get_effect_indexes(ev, rv, cs)
           megs[:ev_index] = indexes[0]
@@ -23,6 +23,7 @@ module MEGS
             result_aps = Tables::RESULT_TABLE[indexes[0]][indexes[1]]
             megs[:raps] = result_aps + extra_raps
           end
+          megs[:resolved] = true
         end
 
         [200, headers, [megs.to_json]]

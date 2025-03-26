@@ -3,7 +3,7 @@ var Util = {
     return !Action.data.last_roll
   },
   show_reroll: function() {
-    if(Action.data.last_roll) {
+    if(Util.show_submit() && Action.data.last_roll) {
       return Action.data.last_roll[0] == Action.data.last_roll[1]
     }
   },
@@ -11,13 +11,16 @@ var Util = {
     return Action.has_data() && Action.data.success === undefined
   },
   show_resolve: function() {
-    return Action.has_data() && Action.data.success
+    return Util.show_effect_fields() && !Action.data.resolved
   },
   show_break: function() {
     return (Util.show_roll() || Util.show_reroll()) && (Util.show_submit() || Util.show_resolve())
   },
   show_result: function() {
     return Action.has_data() && Action.data.success !== undefined
+  },
+  show_effect_fields: function() {
+    return Action.has_data() && Action.data.success
   },
   get_action_fields: function() {
     var av    = document.getElementById('av')
@@ -45,16 +48,11 @@ var Util = {
 
 var Action = {
   data: {},
-  resolved: false,
   has_data: function() {
     return Object.keys(Action.data).length !== 0
   },
-  do_resolve: function() {
-    Action.resolved = Action.has_data() && Action.data.success ? true : false
-  },
   do_clear: function() {
     ['av','ov','ov_cs','ev','rv','rv_cs'].forEach((id) => { document.getElementById(id).value = '' })
-    Action.resolved = false
   },
   handle_two: function(data) {
     if(data.success == false && data.total == 2) {
@@ -98,7 +96,7 @@ var Action = {
   resolve: function(e) {
     var params = Util.get_effect_fields()
 
-    Action.do_get_request('/effect_resolve', params, Action.do_resolve)
+    Action.do_get_request('/effect_resolve', params)
   },
   clear: function(e) {
     var params = { clear: true }
@@ -143,8 +141,8 @@ var ActionDataView = {
 
 var ActionResolvedView = {
   view: function(e) {
-    return [ m(".pure-u-5-5", { style: Action.resolved ? "text-align: center; color: white; background-color: green" : "display: none" },
-	       "RAPs: " + Action.data.raps) ]
+    return [ m(".pure-u-5-5", { style: Action.data.resolved ? "text-align: center; color: white; background-color: green" :
+	                                                      "display: none" }, "RAPs: " + Action.data.raps) ]
   }
 }
 export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView }

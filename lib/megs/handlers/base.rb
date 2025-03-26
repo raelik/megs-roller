@@ -6,7 +6,7 @@ module MEGS
       ALLOWED_METHODS = %w(GET)
       REQUIRED_PARAMS = []
 
-      # success and last_roll are intentionally not included here
+      # success, resolved and last_roll are intentionally not included here
       MEGS_KEYS = %i(av ov ov_cs av_index ov_index
                      ev rv rv_cs ev_index rv_index
                      target total cs raps).freeze
@@ -35,16 +35,18 @@ module MEGS
       end
 
       def megs=(cookie_str)
-        arr     = cookie_str.split('&')
-        last    = arr.pop(2).map(&:to_i)
-        success = arr.pop
+        arr      = cookie_str.split('&')
+        last     = arr.pop(2).map(&:to_i)
+        resolved = arr.pop
+        success  = arr.pop
         @megs = Hash[MEGS_KEYS.zip(arr.map(&:to_i))]
         @megs[:last_roll] = last
-        @megs[:success] = (success == 'true') unless success.empty?
+        @megs[:resolved] = true unless resolved.empty?
+        @megs[:success]  = (success == 'true') unless success.empty?
       end
 
       def megs_cookie
-        (megs.values_at(*MEGS_KEYS) + [megs[:success].to_s] + megs[:last_roll]).join('&')
+        (megs.values_at(*MEGS_KEYS) + [megs[:success].to_s, megs[:resolved].to_s] + megs[:last_roll]).join('&')
       end
 
       def validate_cookie
