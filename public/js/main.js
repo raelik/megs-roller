@@ -3,12 +3,21 @@ import { Util, Action, ActionClearButton, ActionRollButtons,
 
 var Main = {
   action: Action,
+  oncreate: function(vnode) {
+    document.getElementById('av').focus({ focusVisible: true })
+  },
   onupdate: function(vnode) {
     var viewport = document.querySelector('meta[name="viewport"]');
 
     if ( viewport ) {
       viewport.content = 'initial-scale=1';
       viewport.content = 'width=device-width';
+    }
+
+    if(Util.show_roll()) {
+      document.getElementById('av').focus({ focusVisible: true })
+    } else if (Action.data.success && !Action.data.resolved) {
+      document.getElementById('ev').focus({ focusVisible: true })
     }
   },
   text_field_attrs: function(id) {
@@ -20,7 +29,7 @@ var Main = {
   },
   action_field_attrs: function(id) {
     var attrs = Main.text_field_attrs(id)
-    return Object.assign(attrs, Util.show_result() ? { disabled: true } : {})
+    return Object.assign(attrs, !Util.show_roll() ? { disabled: true } : {})
   },
   result_style: function() {
     return Util.show_result() ? ("text-align: center; margin-bottom: 10px; color: white; background-color: " +
