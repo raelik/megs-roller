@@ -5,7 +5,7 @@ module MEGS
     class EffectResolve < Base
       REQUIRED_PARAMS = %w(ev rv)
 
-      def serve
+      def get
         ev, rv, rv_cs = params.values_at('ev', 'rv', 'rv_cs').map(&:to_i)
         megs[:ev]    = ev
         megs[:rv]    = rv

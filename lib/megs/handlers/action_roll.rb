@@ -27,20 +27,13 @@ module MEGS
 
         # Loop through the column and start counting column shifts. Don't bother
         # if we're already at the last column.
-        cs = row.each.with_index.reduce(0) do |sum, (v, i)|
-          if i < start
-            sum
-          else
-            megs[:total] >= v ? sum + 1 : sum
-          end
-        end unless start > Tables::MAX_INDEX
+        cs = row[start..-1].reduce(0) { |sum, v| megs[:total] >= v ? sum + 1 : sum } unless start > Tables::MAX_INDEX
 
         # If we've hit the last column and still need to shift, start moving up.
         if (start + cs) > Tables::MAX_INDEX && megs[:total] > row[Tables::MAX_INDEX]
-          cs += ((megs[:av_index] - 1)..1).step(-1).reduce(0) do |sum, i|
-            v = Tables::ACTION_TABLE[i][Tables::MAX_INDEX]
-            megs[:total] >= v ? sum + 1 : sum
-          end unless (megs[:av_index] - 1) < 1
+          # Grab the relevant last column values in reverse order
+          last_col = Tables::MAX_INDEX[1..-1].transpose[-1][0..(megs[:av_index] - 2)].reverse
+          cs += last_col.reduce(0) { |sum, v| megs[:total] >= v ? sum + 1 : sum } unless (megs[:av_index] - 1) < 1
 
           # If you've somehow managed to roll above 120... here you go.
           cs += ((megs[:total] - 120) / 10.0).ceil if megs[:total] > 120
@@ -51,7 +44,7 @@ module MEGS
         return cs * -1
       end
 
-      def serve
+      def get
         av, ov, ov_cs = params.values_at('av','ov','ov_cs').map(&:to_i)
 
         if params['result'] && !new_action?(av, ov, ov_cs)

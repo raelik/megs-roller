@@ -53,12 +53,12 @@ module MEGS
         return true if cookies['sig'].nil? && cookies['megs'].nil?
         return true if cookies['sig'].empty? && cookies['megs'].empty?
         signature = cookies['sig']
-        check_sig = generate_signature(config['secret'], cookies['megs'])
+        check_sig = generate_signature(cookies['megs'])
         Rack::Utils.secure_compare(signature, check_sig) && (self.megs = cookies['megs'])
       end
 
       def set_cookies(h)
-        { megs: megs_cookie, sig: generate_signature(config['secret'], megs_cookie) }.each do |k,v|
+        { megs: megs_cookie, sig: generate_signature(megs_cookie) }.each do |k,v|
           Rack::Utils.set_cookie_header!(h, k.to_s, { value: v, max_age: 3600, expires: Time.now + 3600 })
         end
         h
@@ -73,10 +73,14 @@ module MEGS
           delete_cookies(headers)
           [200, headers, [{}.to_json]]
         else
-          s, h, b = serve
+          missing = missing_params
+          raise Error.new(400, "Missing required param: #{missing.join(', ')}") unless missing.empty?
+          s, h, b = self.send(request_method.downcase.to_sym)
           set_cookies(h)
           [s, h, b]
         end
+      rescue NoMethodError => e
+        raise Error.new(405, "Method #{request_method} not allowed for #{path_info}")
       rescue Error => e
         headers = {}
         delete_cookies(headers) if e.status == 401
@@ -84,8 +88,12 @@ module MEGS
       end
 
       # passthrough methods
-      def generate_signature(secret, payload)
-        Handlers::Base.generate_signature(secret, payload)
+      def generate_signature(payload)
+        self.class.generate_signature(config['secret'], payload)
+      end
+
+      def missing_params
+        self.class.missing_params(params)
       end
 
       def params
@@ -98,6 +106,10 @@ module MEGS
 
       def cookies
         request.cookies
+      end
+
+      def request_method
+        request.request_method
       end
     end
   end
