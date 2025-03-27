@@ -2,7 +2,7 @@
 This standalone Ruby web application aids in handling dice rolls for tabletop role-playing games using MEGS (Mayfair's Exponential Game System). This includes games like DC Heroes and Blood of Heroes, but not games like Underground which use a differently scaled variant of MEGS. The Action and Result tables used by this program were taken from Blood of Heroes, with some slight typo and scaling fixes made to the Result table in the higher AP ranges.
 
 
-You can try it out here: [](https://megs-roller-b10c3de2770b.herokuapp.com/)
+You can try it out here: [https://megs-roller-b10c3de2770b.herokuapp.com](https://megs-roller-b10c3de2770b.herokuapp.com)
 
 # Usage
 MEGS Roller is a standard Rack application, with no external gem dependencies beyond `rack` and a Rack-enabled web server (such as Puma, Thin, Unicorn, Webrick, etc).  The inital development work was done with Ruby 2.7, but works fine on versions up to Ruby 3.3.7. It hasn't been tested with later Ruby versions, but it should work.
