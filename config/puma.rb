@@ -1,3 +1,6 @@
+$LOAD_PATH.unshift File.expand_path('../lib', File.dirname(__FILE__))
+require 'megs/db'
+
 workers Integer(ENV['WEB_CONCURRENCY'] || 2)
 threads_count = 5
 threads threads_count, threads_count
@@ -14,3 +17,7 @@ enable_keep_alives(false) if respond_to?(:enable_keep_alives)
 
 rackup      DefaultRackup if defined?(DefaultRackup)
 environment ENV['RACK_ENV'] || 'development'
+
+on_worker_boot do
+  MEGS::DB.connect
+end

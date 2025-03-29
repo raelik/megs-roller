@@ -9,4 +9,6 @@ use Rack::ContentLength
 use Rack::Static, urls: [''], root: 'public', index: 'index.html', cascade: true
 
 config = ENV['MEGS_SECRET'] ? { 'secret' => ENV['MEGS_SECRET'] } : YAML.load_file('config/config.yaml')
+
+MEGS::DB.configure(ENV['MEGS_DB'] || config['database'])
 run MEGS::Server.new(config)

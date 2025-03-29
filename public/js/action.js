@@ -110,7 +110,7 @@ var ActionClearButton = {
   oncreate: Util.center_line_height,
   onupdate: Util.center_line_height,
   view: function(e) {
-    return [ m("span#.centered", m("a.pure-button", { onclick: Action.clear }, "Clear")) ]
+    return [ m("span.centered", m("a.pure-button", { onclick: Action.clear }, "Clear")) ]
   }
 }
 
@@ -118,12 +118,12 @@ var ActionRollButtons = {
   oncreate: Util.center_line_height,
   onupdate: Util.center_line_height,
   view: function(e) {
-    return [ m("span#.centered",
-      Util.show_roll()    ? m("a.pure-button", { id: 'roll',   onclick: Action.roll }, "Roll")   : m("", { style: "display: none" }),
-      Util.show_reroll()  ? m("a.pure-button", { id: 'reroll', onclick: Action.roll }, "Reroll") : m("", { style: "display: none" }),
-      Util.show_break()   ? m("br") : m("", { style: "display: none" }),
-      Util.show_submit()  ? m("a.pure-button", { onclick: Action.result }, "Submit")   : m("", { style: "display: none" }),
-      Util.show_resolve() ? m("a.pure-button", { onclick: Action.resolve }, "Resolve") : m("", { style: "display: none" })
+    return [ m("span.centered",
+      Util.show_roll()    ? m("a.pure-button", { id: 'roll',   onclick: Action.roll }, "Roll")   : "",
+      Util.show_reroll()  ? m("a.pure-button", { id: 'reroll', onclick: Action.roll }, "Reroll") : "",
+      Util.show_break()   ? m("br") : "",
+      Util.show_submit()  ? m("a.pure-button", { onclick: Action.result }, "Submit")   : "",
+      Util.show_resolve() ? m("a.pure-button", { onclick: Action.resolve }, "Resolve") : ""
     )]
   }
 }
