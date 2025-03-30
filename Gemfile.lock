@@ -30,7 +30,10 @@ GEM
       dry-inflector (~> 1.0)
       dry-logic (~> 1.4)
       zeitwerk (~> 2.6)
+    highline (3.1.2)
+      reline
     ice_nine (0.11.2)
+    io-console (0.8.0)
     logger (1.7.0)
     nio4r (2.7.4)
     puma (6.6.0)
@@ -39,6 +42,8 @@ GEM
     rackup (2.2.1)
       rack (>= 3)
     rake (13.1.0)
+    reline (0.6.0)
+      io-console (~> 0.5)
     rom (5.4.2)
       rom-changeset (~> 5.4)
       rom-core (~> 5.4)
@@ -76,6 +81,7 @@ PLATFORMS
 
 DEPENDENCIES
   argon2id (~> 0.8.0)
+  highline (~> 3.1.2)
   puma (~> 6.6.0)
   rack (~> 3.1.12)
   rackup (~> 2.2.1)

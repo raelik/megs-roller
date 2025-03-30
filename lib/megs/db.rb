@@ -15,6 +15,10 @@ module MEGS
         rom_config.auto_registration(File.dirname(__FILE__), namespace: 'MEGS')
         @rom = ROM.container(rom_config)
       end
+
+      def [](dataset)
+        rom.relations[dataset]
+      end
     end
   end
 end
