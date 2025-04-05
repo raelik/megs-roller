@@ -58,7 +58,7 @@ namespace :megs do
     admin = yes_no ? 1 : 0
 
     password_hash = Argon2id::Password.create(password.uniq.first).to_s
-    MEGS::DB[:users].changeset(:create, { username: args.username, name: player_name, password_hash: password_hash, admin: admin }).commit
+    MEGS::DB[:users].changeset(:create, { username: args.username, name: player_name, password: password_hash, admin: admin }).commit
   rescue ArgumentError => e
     puts "ERROR: #{e.message}"
   end
@@ -86,9 +86,22 @@ namespace :megs do
       end
     end
 
-    password_validator = ->(password) { Argon2id::Password.new(user[:password_hash]) == password }
+    class PasswordValidator
+      class << self
+        attr_accessor :password
+        def valid?(pw)
+          password.is_password?(pw)
+        end
+
+        def inspect
+          'current password'
+        end
+      end
+    end
+    PasswordValidator.password = user[:password]
+
     if agree("Change password [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }
-      current = ask("Please enter current password: ") { |q| q.echo = '*'; q.validate = password_validator }
+      current = ask("Please enter current password: ") { |q| q.echo = '*'; q.validate = PasswordValidator }
       new_password = []
       while new_password.uniq.size != 1 || new_password.uniq.first.empty?
         new_password << ask("Please enter a new password for user #{changes[:username] || user[:username]}: ") { |q| q.echo = '*' }
@@ -96,7 +109,7 @@ namespace :megs do
         puts "Passwords did not match, please try again." unless new_password.uniq.size == 1
         puts "Password must not be blank." if new_password.uniq.first.empty?
       end
-      changes[:password_hash] = Argon2id::Password.create(new_password.uniq.first).to_s
+      changes[:password] = Argon2id::Password.create(new_password.uniq.first).to_s
     end
 
     if agree("Change admin status for user #{changes[:username] || user[:username]} [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }

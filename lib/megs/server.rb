@@ -10,12 +10,14 @@ module MEGS
       '/action_roll' => Handlers::ActionRoll,
       '/effect_resolve' => Handlers::EffectResolve,
       '/health' => Handlers::HealthCheck,
-      '/user_test' => Handlers::UserTest
+      '/login' => Handlers::Login,
+      '/logout' => Handlers::Login
     }.freeze
 
     attr_reader :config
-    def initialize(config)
-      @config = config
+    def initialize(conf)
+      @config = conf
+      Handlers::Login.setup(conf)
     end
 
     def validate_request(env)
@@ -30,6 +32,10 @@ module MEGS
       handler.call
     rescue Error => e
       [e.status, {}, [e.message]]
+    rescue => e
+      puts "[%d] %s - %s" % [Process.pid, env['REMOTE_ADDR'], "ERROR: #{e.message}"]
+      e.backtrace.each { |line| puts line }
+      [500, {}, ["Internal Server Error"]]
     end
   end
 end

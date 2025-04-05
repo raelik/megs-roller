@@ -7,7 +7,9 @@
           integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
     <link rel="stylesheet" href="/css/main.css" />
     <title>MEGS Roller</title>
-    <script src="https://unpkg.com/mithril/mithril.min.js"></script>
+    <script src="/js/crypto-js.min.js"></script>
+    <script src="/js/jsencrypt.min.js"></script>
+    <script src="/js/mithril.min.js"></script>
   <head>
   <body>
     <script type="module">
@@ -19,7 +21,7 @@
         "/main": Main
       })
 
-      window.debug = { action: Main.action }
+      window.debug = { main: Main }
     </script>
   </body>
 </html>

@@ -1,7 +1,10 @@
 import { Util, Action, ActionClearButton, ActionRollButtons,
          ActionDataView, ActionResolvedView } from "/js/action.js"
+import { Login, LoginBarView } from "/js/login.js"
 
 var Main = {
+  oninit: Login.setup,
+  login: Login,
   action: Action,
   oncreate: function(vnode) {
     document.getElementById('av').focus({ focusVisible: true })
@@ -66,7 +69,8 @@ var Main = {
         m(".pure-u-1-3.centered", m("input", Main.effect_field_attrs('rv'))),
         m(".pure-u-1-3.centered", m("input", Main.effect_field_attrs('rv_cs')))
       ),
-      m(ActionResolvedView)
+      m(ActionResolvedView),
+      m(LoginBarView)
     )]
   }
 }

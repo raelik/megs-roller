@@ -1,3 +1,10 @@
+> [!WARNING]  
+> This branch (roll\_log\_and\_character\_db) uses a VERY over-engineered login system that uses pure Javascript
+> public key encryption and signatures (via JSCrypt) to encrypt login data and validate session data. It serves
+> as a testbed for some ideas I had, and while it DOES work, don't use it as-is. There's a reason we SSL, so just
+> use that and rip out all the insanity. The existing HMAC cookie signature is more than adequate to validate
+> players aren't cheating rolls, just integrate the sess cookie into the hash calculation and you're set.
+
 # MEGS Roller
 This standalone Ruby web application aids in handling dice rolls for tabletop role-playing games using MEGS (Mayfair's Exponential Game System). This includes games like DC Heroes and Blood of Heroes, but not games like Underground which use a differently scaled variant of MEGS. The Action and Result tables used by this program were taken from Blood of Heroes, with some slight typo and scaling fixes made to the Result table in the higher AP ranges.
 

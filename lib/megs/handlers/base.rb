@@ -1,4 +1,5 @@
 require 'openssl'
+require 'megs/handlers/login'
 
 module MEGS
   module Handlers
@@ -7,9 +8,8 @@ module MEGS
       REQUIRED_PARAMS = []
 
       # success, resolved and last_roll are intentionally not included here
-      MEGS_KEYS = %i(av ov ov_cs av_index ov_index
-                     ev rv rv_cs ev_index rv_index
-                     target total cs raps).freeze
+      MEGS_KEYS = %i(user char av ov ov_cs av_index ov_index ev rv rv_cs
+                     ev_index rv_index target target total cs raps).freeze
 
       class << self
         def generate_signature(secret, payload)
@@ -25,12 +25,13 @@ module MEGS
         end
       end
 
-      attr_reader :config, :headers, :request, :megs
-      def initialize(config, request)
-        @config  = config
-        @request = request
+      attr_reader :config, :headers, :request, :megs, :session
+      def initialize(conf, req)
+        @config  = conf
+        @request = req
         @headers = { 'content-type' => 'application/json' }
         @megs    = {}
+        @session = Login.validate_session(req)
         raise Error.new(401, "Cookie signature invalid") unless validate_cookie
       end
 
@@ -52,7 +53,7 @@ module MEGS
       def validate_cookie
         return true if cookies['sig'].nil? && cookies['megs'].nil?
         return true if cookies['sig'].empty? && cookies['megs'].empty?
-        signature = cookies['sig']
+        signature  = cookies['sig']
         check_sig = generate_signature(cookies['megs'])
         Rack::Utils.secure_compare(signature, check_sig) && (self.megs = cookies['megs'])
       end
@@ -65,7 +66,7 @@ module MEGS
       end
 
       def delete_cookies(h)
-        %w(sig megs).each { |k| Rack::Utils.delete_cookie_header!(headers, k) }
+        %w(sig megs).each { |k| Rack::Utils.delete_cookie_header!(h, k) }
       end
 
       def call
@@ -82,7 +83,7 @@ module MEGS
       rescue NoMethodError => e
         raise Error.new(405, "Method #{request_method} not allowed for #{path_info}")
       rescue Error => e
-        headers = {}
+        @headers = {}
         delete_cookies(headers) if e.status == 401
         [e.status, headers, [e.message]]
       end

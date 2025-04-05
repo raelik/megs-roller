@@ -26,7 +26,8 @@ var Util = {
     var av    = document.getElementById('av')
     var ov    = document.getElementById('ov')
     var ov_cs = document.getElementById('ov_cs')
-    return { av: av.value, ov: ov.value, ov_cs: ov_cs.value }
+    var c     = document.getElementById('character')
+    return Object.assign({ av: av.value, ov: ov.value, ov_cs: ov_cs.value }, c ? { c: c.value } : {})
   },
   get_effect_fields: function() {
     var ev    = document.getElementById('ev')
@@ -48,6 +49,7 @@ var Util = {
 
 var Action = {
   data: {},
+  login: null,
   has_data: function() {
     return Object.keys(Action.data).length !== 0
   },
@@ -68,6 +70,7 @@ var Action = {
       m.request({
         method: "GET",
         url: url,
+        headers: (Action.login.logged_in() ? { 'X-MEGS-Session-Signature': Action.login.sign() } : {}),
         params: params
       })
       .then(function(data) {

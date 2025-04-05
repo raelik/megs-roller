@@ -28,9 +28,27 @@ a.pure-button {
   margin-right: 10px;
 }
 
-input[type="text"] {
+input, select {
   margin-top: 5px;
   margin-bottom: 10px;
+}
+
+div#login {
+  padding: 5px 5px 5px 10px;
+  background-color: #eeeeff;
+}
+
+div#login div {
+  font-size: 14px;
+}
+
+div#login a.pure-button {
+  margin: 0px 5px 0px 5px;
+}
+
+div#login input, div#login select {
+  font-size: 14px;
+  margin: 2.7px 10px 2.7px 5px;
 }
 
 span.centered {

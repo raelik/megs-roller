@@ -45,6 +45,14 @@ module MEGS
       end
 
       def get
+        megs[:user] = session ? session[:user][:id] : 0
+        if megs[:user] != 0
+          if (char_id = params['c'].to_i) == 0 || char_id.nil?
+            megs[:char] = 0
+          else
+            megs[:char] = session[:chars].map { |c| c[:id] }.include?(char_id) ? char_id : 0
+          end
+        end
         av, ov, ov_cs = params.values_at('av','ov','ov_cs').map(&:to_i)
 
         if params['result'] && !new_action?(av, ov, ov_cs)
