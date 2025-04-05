@@ -66,15 +66,17 @@ var Login = {
     .finally(() => root.style.cursor = "auto")
   },
   login: function(e) {
-    Action.clear()
-    var user = document.getElementById('username')
-    var pass = document.getElementById('password')
-    Login.do_login_request({ u: user.value, p: pass.value }) 
+    Action.clear(null, function() {
+      var user = document.getElementById('username')
+      var pass = document.getElementById('password')
+      Login.do_login_request({ u: user.value, p: pass.value })
+    })
   },
   logout: function(e) {
-    Action.clear()
-    Login.data = {}
-    Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() })
+    Action.clear(null, function() {
+      Login.data = {}
+      Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() })
+    })
   },
   center_line_height: function(vnode) {
     var nodes = vnode.dom.querySelectorAll('#login span')
@@ -90,8 +92,9 @@ var Login = {
 
 var CharacterOptions = {
   view: function() {
-    var options = [m("option", { value: 0 }, Login.data.user.name)]
-    return options.concat(Login.data.chars.map((char) => { return m("option", { value: char.id }, char.name) }))
+    return Object.keys(Login.data.chars).sort().map(function(char_id) {
+      return m("option", { value: char_id }, Login.data.chars[char_id])
+    })
   }
 }
 

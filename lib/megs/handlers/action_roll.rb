@@ -45,14 +45,9 @@ module MEGS
       end
 
       def get
-        megs[:user] = session ? session[:user][:id] : 0
-        if megs[:user] != 0
-          if (char_id = params['c'].to_i) == 0 || char_id.nil?
-            megs[:char] = 0
-          else
-            megs[:char] = session[:chars].map { |c| c[:id] }.include?(char_id) ? char_id : 0
-          end
-        end
+        char_id = params['c'].to_i
+        megs.merge!(!session ? { user: nil, char: nil } : { user: session[:user][:id],
+                                 char: session[:chars][char_id] ? char_id : 0 })
         av, ov, ov_cs = params.values_at('av','ov','ov_cs').map(&:to_i)
 
         if params['result'] && !new_action?(av, ov, ov_cs)
@@ -65,25 +60,18 @@ module MEGS
 
           # 2 is ALWAYS an automatic fail, even on a reroll.
           if sum == 2
-            megs[:success]  = false
-            megs[:total]    = sum
+            megs.merge!(success: false, total: sum)
           else
             # Only accept reroll requests if the action params haven't changes and doubles were rolled.
             if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]
               megs[:total] = megs[:total] + sum
             else
-              megs[:av]    = av
-              megs[:ov]    = ov
-              megs[:ov_cs] = ov_cs
-              megs[:total] = sum
-              megs[:cs]    = 0
-              megs[:raps]  = 0
+              megs.merge!(av: av, ov: ov, ov_cs: ov_cs, total: sum, cs: 0, raps: 0)
 
               indexes, target_extra = Tables.get_action_indexes(av, ov, ov_cs)
               if indexes
-                megs[:av_index] = indexes[0]
-                megs[:ov_index] = indexes[1]
-                megs[:target]   = Tables::ACTION_TABLE[indexes[0]][indexes[1]] + target_extra
+                megs.merge!(av_index: indexes[0], ov_index: indexes[1],
+                            target: Tables::ACTION_TABLE[indexes[0]][indexes[1]] + target_extra)
               end
             end
           end

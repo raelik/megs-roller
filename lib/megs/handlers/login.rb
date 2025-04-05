@@ -101,13 +101,16 @@ module MEGS
 
       def set_session(id, key, user)
         sessions[id] = { key: key, user: user }
-        sessions[id][:chars] = (user[:admin] ? MEGS::DB[:characters] : user.characters).to_a
+        sessions[id][:chars] =
+          Hash[(user[:admin] ? MEGS::DB[:characters] : user.characters).map do |char|
+            [char[:id], char]
+          end]
       end
 
       def get_session_data(id)
        s = sessions[id]
        { user: s[:user].filter { |k| %i(id username name admin).include?(k) },
-         chars: s[:chars].map { |c| { id: c[:id], name: c[:name] } } }.to_json
+         chars: { 0 => s[:user][:name] }.merge(Hash[s[:chars].map { |k, v| [ k, v[:name] ] }]) }.to_json
       end
     end
   end

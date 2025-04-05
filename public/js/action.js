@@ -62,7 +62,7 @@ var Action = {
       Action.data.cs = ''
     }
   },
-  do_get_request: function(url, params, cb) {
+  do_get_request: function(url, params, cb, final_cb) {
     var root = document.body
     root.style.cursor = "wait"
 
@@ -79,7 +79,10 @@ var Action = {
       })
     ])
     .catch(err => null)
-    .finally(() => root.style.cursor = "auto")
+    .finally(function() {
+      root.style.cursor = "auto"
+      if(final_cb) { final_cb() }
+    })
   },
   roll: function(e) {
     var reroll = (e.target.id == 'reroll')
@@ -101,10 +104,10 @@ var Action = {
 
     Action.do_get_request('/effect_resolve', params)
   },
-  clear: function(e) {
+  clear: function(e, final_cb) {
     var params = { clear: true }
 
-    Action.do_get_request('/action_roll', params, Action.do_clear)
+    Action.do_get_request('/action_roll', params, Action.do_clear, final_cb)
   }
 }
 
