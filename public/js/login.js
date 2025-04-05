@@ -25,7 +25,11 @@ var Login = {
   },
   setup: function(vnode) {
     Action.login = Login
-    Login.do_get_request('/login', {}, (data) => { Login.server_key.setPublicKey(data.key) })
+    Login.do_get_request('/login', {}, function(data) {
+      Login.server_key.setPublicKey(data.key)
+      // There should be a host key check here, to alert the user if the key changed.
+      localStorage.setItem("server_key", Login.server_key.getPublicKey())
+    })
     var stored_private = localStorage.getItem("private_key")
     var stored_public  = localStorage.getItem("public_key")
     if(stored_private && stored_public) {
@@ -62,7 +66,21 @@ var Login = {
         if(cb) { cb(data) }
       })
     ])
-    .catch(err => null)
+    .catch(function(err) {
+      if(err.code == 401) {
+        var creds = ['username','password'].map((id) => { return document.getElementById(id) })
+        creds.forEach((e) => { e.classList.add('alert') })
+        new Promise(r => setTimeout(r, 250)).then(function() {
+          creds.forEach(function(e) {
+            e.classList.add('fade')
+            e.classList.remove('alert')
+          })
+          new Promise(r2 => setTimeout(r2, 1000)).then(function() {
+            creds.forEach((e) => { e.classList.remove('fade') })
+          })
+        })
+      }
+    })
     .finally(() => root.style.cursor = "auto")
   },
   login: function(e) {
