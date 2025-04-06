@@ -27,12 +27,14 @@ module MEGS
         def validate_session(request)
           cookies = request.cookies
           if id = cookies['sess']
-            if (s = request.session) && s.id.to_s == id
-              signature = Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_SIGNATURE'))
+            if (s = request.session) && s.id.to_s == id && s[:key] &&
+               (signature = Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_SIGNATURE')) rescue nil)
               data = %w(sess megs sig).filter { |k| !cookies[k].nil? }.map { |k| "#{k}=#{URI.encode_www_form_component(cookies[k])}" }.join('; ')
               raise ArgumentError.new("verification failed") unless s[:key].verify("SHA256", signature, data)
+              s.options[:skip] = false
               s
             else
+              s && s.options[:drop] = true
               false
             end
           end
@@ -56,10 +58,10 @@ module MEGS
             Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
             [200, headers, { key: keys['public'] }.to_json]
           when ['POST', '/login']
-            data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))]
-            user_query = MEGS::DB[:users].by_username(data['u'])
+            data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil
+            user_query = data && MEGS::DB[:users].by_username(data['u']).combine(:characters)
 
-            if (user = user_query.first) && user[:password].is_password?(data['p']) &&
+            if data && (user = user_query.first) && user[:password].is_password?(data['p']) &&
                (key = OpenSSL::PKey::RSA.new(Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_KEY'))))
               set_session(request.session, key, user)
               [200, headers, get_session_data(request.session)]
@@ -67,7 +69,7 @@ module MEGS
               raise Error.new(401, "Unauthorized")
             end
           when ['GET',  '/logout']
-            self.class.validate_session(request)
+            s = self.class.validate_session(request)
             s && s.options[:drop] = true
             Rack::Utils.delete_cookie_header!(headers, 'sess')
             [204, headers, []]
@@ -77,6 +79,10 @@ module MEGS
         [s, h, [b]]
       rescue Error => e
         headers = {}
+        if e.status == 401
+          s && s.options[:drop] = true
+          Rack::Utils.delete_cookie_header!(headers, 'sess')
+        end
         [e.status, headers, [e.message]]
       end
 
@@ -92,8 +98,8 @@ module MEGS
 
       def set_session(s, key, user)
         s.options[:skip] = false
-        s.merge!(key: key, user: user)
-        chars = (user[:admin] ? MEGS::DB[:characters].combine(:user).order(:user_id, :id) : user.characters).to_a
+        s.merge!(key: key, user: user, current_rolls: [])
+        chars = (user[:admin] ? MEGS::DB[:characters].combine(:user).order(:user_id, :id) : user[:characters]).to_a
         s[:chars] =
           Hash[chars.map do |char|
             [char[:id], char]

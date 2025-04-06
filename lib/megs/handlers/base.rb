@@ -32,6 +32,7 @@ module MEGS
         @headers = { 'content-type' => 'application/json' }
         @megs    = {}
         @session = Login.validate_session(req)
+        Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
         raise Error.new(401, "Cookie signature invalid") unless validate_cookie
       end
 
@@ -71,6 +72,7 @@ module MEGS
 
       def call
         if params['clear']
+          session['current_rolls'].clear if session
           delete_cookies(headers)
           [200, headers, [{}.to_json]]
         else
@@ -86,6 +88,16 @@ module MEGS
         @headers = {}
         delete_cookies(headers) if e.status == 401
         [e.status, headers, [e.message]]
+      end
+
+      def log_roll
+        MEGS::DB[:rolls].changeset(:create, { timestamp: Time.now, session_id: session.id.to_s, user_id: megs[:user],
+                                              character_id: megs[:char] == 0 ? nil : megs[:char],
+                                              rolls: session[:current_rolls] }.merge(log_fields)).commit if session
+      end
+
+      def log_fields
+        fail NotImplementedError, "Handler classes must define log_fields."
       end
 
       # passthrough methods

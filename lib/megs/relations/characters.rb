@@ -7,6 +7,7 @@ module MEGS
       schema(:characters, infer: true) do
         associations do
           belongs_to :user
+          has_many :rolls
         end
       end
     end

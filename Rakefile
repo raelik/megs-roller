@@ -54,11 +54,9 @@ namespace :megs do
       puts "Password must not be blank." if password.uniq.first.empty?
     end
 
-    yes_no = agree("Is #{args.username} an admin [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }
-    admin = yes_no ? 1 : 0
+    admin = agree("Is #{args.username} an admin [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }
 
-    password_hash = Argon2id::Password.create(password.uniq.first).to_s
-    MEGS::DB[:users].changeset(:create, { username: args.username, name: player_name, password: password_hash, admin: admin }).commit
+    MEGS::DB[:users].changeset(:create, { username: args.username, name: player_name, password: password.uniq.first, admin: admin }).commit
   rescue ArgumentError => e
     puts "ERROR: #{e.message}"
   end
@@ -109,12 +107,11 @@ namespace :megs do
         puts "Passwords did not match, please try again." unless new_password.uniq.size == 1
         puts "Password must not be blank." if new_password.uniq.first.empty?
       end
-      changes[:password] = Argon2id::Password.create(new_password.uniq.first).to_s
+      changes[:password] = new_password.uniq.first
     end
 
     if agree("Change admin status for user #{changes[:username] || user[:username]} [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }
-      yes_no = agree("Is #{changes[:username] || user[:username]} an admin [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }
-      changes[:admin] = yes_no ? 1 : 0
+      changes[:admin] = agree("Is #{changes[:username] || user[:username]} an admin [y/N]? ") { |q| q.default = 'n'; q.default_hint_show = false }
     end
 
     unless changes.empty?

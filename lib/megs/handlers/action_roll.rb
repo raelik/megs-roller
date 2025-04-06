@@ -51,15 +51,17 @@ module MEGS
 
         if params['result'] && !new_action?(av, ov, ov_cs)
           megs[:success] = megs[:total] >= megs[:target]
-          megs[:cs] = calculate_cs if megs[:success]
+          megs[:success] ? (megs[:cs] = calculate_cs) : log_roll
         elsif megs[:success].nil?
           dice = roll
+          session[:current_rolls] << dice if session
           sum  = dice.sum
           last = megs[:last_roll]
 
           # 2 is ALWAYS an automatic fail, even on a reroll.
           if sum == 2
             megs.merge!(success: false, total: sum)
+            log_roll
           else
             # Only accept reroll requests if the action params haven't changes and doubles were rolled.
             if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]
@@ -78,6 +80,11 @@ module MEGS
         end
 
         [200, headers, [megs.to_json]]
+      end
+
+      def log_fields
+        Hash[%w(av ov ov_cs).map { |k| [ k.to_sym, params[k] ]}].merge(
+          megs.filter { |k| %i(target total success).include?(k) })
       end
     end
   end
