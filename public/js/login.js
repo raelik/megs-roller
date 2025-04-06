@@ -2,11 +2,12 @@ import { Util, Action } from "/js/action.js"
 
 var Login = {
   data: {},
+  processing: false,
   logged_in: () => { return Object.keys(Login.data).length !== 0 },
   server_key: new JSEncrypt(),
   keys: { priv: new JSEncrypt(),
           pub: new JSEncrypt() },
-  do_get_request: function(url, headers, cb) {
+  do_get_request: function(url, headers, cb, final_cb) {
     var root = document.body
     root.style.cursor = "wait"
 
@@ -21,7 +22,10 @@ var Login = {
       })
     ])
     .catch(err => null)
-    .finally(() => root.style.cursor = "auto")
+    .finally(function() {
+      root.style.cursor = "auto"
+      if(final_cb) { final_cb() }
+    })
   },
   setup: function(vnode) {
     Action.login = Login
@@ -49,7 +53,7 @@ var Login = {
   sign: function() {
     return Login.keys.priv.sign(document.cookie, CryptoJS.SHA256, "sha256")
   },
-  do_login_request: function(body, cb) {
+  do_login_request: function(body, cb, final_cb) {
     var root = document.body
     root.style.cursor = "wait"
 
@@ -81,19 +85,24 @@ var Login = {
         })
       }
     })
-    .finally(() => root.style.cursor = "auto")
+    .finally(function() {
+      root.style.cursor = "auto"
+      if(final_cb) { final_cb() }
+    })
   },
   login: function(e) {
+    Login.processing = true
     Action.clear(null, function() {
       var user = document.getElementById('username')
       var pass = document.getElementById('password')
-      Login.do_login_request({ u: user.value, p: pass.value })
+      Login.do_login_request({ u: user.value, p: pass.value }, null, () => { Login.processing = false })
     })
   },
   logout: function(e) {
+    Login.processing = true
     Action.clear(null, function() {
       Login.data = {}
-      Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() })
+      Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, null, () => { Login.processing = false })
     })
   },
   center_line_height: function(vnode) {

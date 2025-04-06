@@ -3,8 +3,6 @@ require 'openssl'
 require 'base64'
 require 'uri'
 require 'json'
-require 'securerandom'
-require 'concurrent/hash'
 
 module MEGS
   module Handlers
@@ -13,9 +11,8 @@ module MEGS
 
       @config   = {}
       @keys     = {}
-      @sessions = Concurrent::Hash.new
       class << self
-        attr_reader :config, :keys, :sessions
+        attr_reader :config, :keys
         def setup(conf)
           raise ArgumentError.new("Required configuration parameter 'keys' undefined") unless conf['keys']
           raise ArgumentError.new("Required 'keys' subparameter 'public' undefined")   unless conf['keys']['public']
@@ -30,7 +27,7 @@ module MEGS
         def validate_session(request)
           cookies = request.cookies
           if id = cookies['sess']
-            if s = sessions[id]
+            if (s = request.session) && s.id.to_s == id
               signature = Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_SIGNATURE'))
               data = %w(sess megs sig).filter { |k| !cookies[k].nil? }.map { |k| "#{k}=#{URI.encode_www_form_component(cookies[k])}" }.join('; ')
               raise ArgumentError.new("verification failed") unless s[:key].verify("SHA256", signature, data)
@@ -49,7 +46,7 @@ module MEGS
       attr_reader :config, :request, :headers
       def initialize(_c, req)
         @request = req
-        @headers = { 'allow' => 'GET, POST', 'content-type' => 'appliction/json' }
+        @headers = { 'content-type' => 'appliction/json' }
       end
 
       def call
@@ -64,16 +61,14 @@ module MEGS
 
             if (user = user_query.first) && user[:password].is_password?(data['p']) &&
                (key = OpenSSL::PKey::RSA.new(Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_KEY'))))
-              (id = SecureRandom.uuid) until id && sessions[id].nil?
-              set_session(id, key, user)
-              Rack::Utils.set_cookie_header!(headers, 'sess', { value: id, max_age: 3600, expires: Time.now + 3600 })
-              [200, headers, get_session_data(id)]
+              set_session(request.session, key, user)
+              [200, headers, get_session_data(request.session)]
             else
               raise Error.new(401, "Unauthorized")
             end
           when ['GET',  '/logout']
             self.class.validate_session(request)
-            sessions.delete(request.cookies['sess'])
+            s && s.options[:drop] = true
             Rack::Utils.delete_cookie_header!(headers, 'sess')
             [204, headers, []]
           else
@@ -89,26 +84,22 @@ module MEGS
         self.class.keys
       end
 
-      def sessions
-        self.class.sessions
-      end
-
       private
 
       def users
         MEGS::DB[:users]
       end
 
-      def set_session(id, key, user)
-        sessions[id] = { key: key, user: user }
-        sessions[id][:chars] =
+      def set_session(s, key, user)
+        s.options[:skip] = false
+        s.merge!(key: key, user: user)
+        s[:chars] =
           Hash[(user[:admin] ? MEGS::DB[:characters] : user.characters).map do |char|
             [char[:id], char]
           end]
       end
 
-      def get_session_data(id)
-       s = sessions[id]
+      def get_session_data(s)
        { user: s[:user].filter { |k| %i(id username name admin).include?(k) },
          chars: { 0 => s[:user][:name] }.merge(Hash[s[:chars].map { |k, v| [ k, v[:name] ] }]) }.to_json
       end

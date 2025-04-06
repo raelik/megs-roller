@@ -1,0 +1,3 @@
+secret: '<your secret goes here>'  # This is used to create HMAC signatures of the megs cookie data.
+database: 'sqlite://db/db.sqlite'  # Any Sequel-compatible database URI should work here. You'll need the appropriate rubygem driver added to the Gemfile.
+memcache_server: 'localhost:11211' # The memcache server is used for session storage

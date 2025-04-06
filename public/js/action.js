@@ -1,6 +1,6 @@
 var Util = {
   show_roll: function() {
-    return !Action.data.last_roll
+    return !Action.login.processing && !Action.data.last_roll
   },
   show_reroll: function() {
     if(Util.show_submit() && Action.data.last_roll) {

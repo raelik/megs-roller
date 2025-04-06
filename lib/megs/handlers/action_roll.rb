@@ -45,10 +45,9 @@ module MEGS
       end
 
       def get
-        char_id = params['c'].to_i
+        av, ov, ov_cs, char_id = params.values_at('av','ov','ov_cs','c').map(&:to_i)
         megs.merge!(!session ? { user: nil, char: nil } : { user: session[:user][:id],
                                  char: session[:chars][char_id] ? char_id : 0 })
-        av, ov, ov_cs = params.values_at('av','ov','ov_cs').map(&:to_i)
 
         if params['result'] && !new_action?(av, ov, ov_cs)
           megs[:success] = megs[:total] >= megs[:target]
