@@ -47,7 +47,7 @@ var Login = {
       // There should be a host key check here, to alert the user if the key changed.
       localStorage.setItem("server_key", Login.server_key.getPublicKey())
       if(data.session) {
-        Login.data = data
+        Login.data = data.session
       }
       Login.processing = false
     })

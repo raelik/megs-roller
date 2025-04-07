@@ -56,7 +56,7 @@ module MEGS
           when ['GET',  '/login']
             session = self.class.validate_session(request)
             Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
-            [200, headers, ({ key: keys['public'] }.merge(session ? get_session_data(session) : {}).to_json)]
+            [200, headers, ({ key: keys['public'] }.merge(session ? { session: get_session_data(session) } : {}).to_json)]
           when ['POST', '/login']
             data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil
             user_query = data && MEGS::DB[:users].by_username(data['u']).combine(:characters)
