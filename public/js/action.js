@@ -2,6 +2,9 @@ var Util = {
   show_roll: function() {
     return !Action.login.processing && !Action.data.last_roll
   },
+  show_log: function() {
+    return Action.login.logged_in()
+  },
   show_reroll: function() {
     if(Util.show_submit() && Action.data.last_roll) {
       return Action.data.last_roll[0] == Action.data.last_roll[1]
@@ -49,16 +52,20 @@ var Util = {
 
 var Action = {
   data: {},
+  log: [],
   login: null,
   has_data: function() {
     return Object.keys(Action.data).length !== 0
   },
-  do_clear: function() {
-    ['av','ov','ov_cs','ev','rv','rv_cs'].forEach((id) => { document.getElementById(id).value = '' })
+  do_clear: function(d) {
+    var fields = ['av','ov','ov_cs','ev','rv','rv_cs']
+    Action.data = d
+    fields.forEach((id) => { document.getElementById(id).value = '' })
   },
-  handle_two: function(data) {
-    if(data.success == false && data.total == 2) {
-      Action.data.target = data.target || ''
+  handle_two: function(d) {
+    Action.data = d
+    if(d.success == false && d.total == 2) {
+      Action.data.target = d.target || ''
       Action.data.cs = ''
     }
   },
@@ -73,15 +80,14 @@ var Action = {
         headers: (Action.login.logged_in() ? { 'X-MEGS-Session-Signature': Action.login.sign() } : {}),
         params: params
       })
-      .then(function(data) {
-        Action.data = data
-        if(cb) { cb(data) }
+      .then(function(d) {
+        if(cb) { cb(d) }
       })
     ])
     .catch(err => null)
     .finally(function() {
-      root.style.cursor = "auto"
       if(final_cb) { final_cb() }
+      root.style.cursor = "auto"
     })
   },
   roll: function(e) {
@@ -93,21 +99,42 @@ var Action = {
 
     Action.do_get_request('/action_roll', params, Action.handle_two)
   },
+  roll_log: function(cb) {
+    if(Action.login.logged_in()) {
+      Action.do_get_request('/roll_log', {}, (data) => { Action.log = data }, cb)
+    }
+  },
   result: function(e) {
     var params = Util.get_action_fields()
     params.result = true
 
-    Action.do_get_request('/action_roll', params)
+    Action.do_get_request('/action_roll', params, (data) => { Action.data = data })
   },
   resolve: function(e) {
     var params = Util.get_effect_fields()
 
-    Action.do_get_request('/effect_resolve', params)
+    Action.do_get_request('/effect_resolve', params, (data) => { Action.data = data })
   },
   clear: function(e, final_cb) {
     var params = { clear: true }
 
     Action.do_get_request('/action_roll', params, Action.do_clear, final_cb)
+  },
+  log_promise: function() {
+    new Promise(r => setTimeout(r, 5000)).then(function() {
+      Action.roll_log(function() {
+        if(Action.login.logged_in()) {
+          Action.log_promise();
+        }
+      })
+    })
+  },
+  start_log: function(vnode) {
+    Action.roll_log(function() {
+      if(Action.login.logged_in()) {
+        Action.log_promise();
+      }
+    })
   }
 }
 
@@ -151,4 +178,41 @@ var ActionResolvedView = {
 	                                                      "display: none" }, "RAPs: " + Action.data.raps) ]
   }
 }
-export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView }
+
+var ActionLogRow = {
+  view: function(e) {
+    var roll = e.attrs.roll
+    // ----- UL/LI version
+    // var trailer = roll.success ? [('CS: ' + roll.cs), (roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : '')),
+    //                              ('RAPs: ' + roll.raps)] : []
+    // return m("li", [roll.user, roll.character, (roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : '')),
+    //                (roll.total + " vs. " + roll.target + ' (' + (roll.success ? 'SUCCESS' : 'FAIL') + ')')].concat(trailer).join(' - '))
+    // ☑ &#x2611; ☒ &#x2612;
+    // ----- Table Version
+    // return m("tr", m("td", roll.user), m("td", roll.character), m("td.centered", roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : '')),
+    //               m("td.centered", roll.total + " vs. " + roll.target), m("td.centered", roll.success ? m("span.success", "☑") : m("span.failure", "☒")),
+    //               m("td.centered", roll.cs), m("td.centered", roll.ev ? (roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : '')) : ''),
+    //               m("td.centered", roll.raps))
+    var pre_fields  = [roll.character ? (roll.character + ' (' + roll.user + ')') : roll.user,
+                       'A/O: ' + roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : ''),
+                       roll.total + " v " + roll.target].join(', ')
+    var post_fields = roll.success ? ', ' +
+      ['CS: ' + roll.cs, 'E/R: ' + roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : ''), 'RAPs: ' + roll.raps].join(', ') : ''
+    var mark_cl     = roll.success ? "success" : "failure"
+    var mark        = roll.success ? " ☑" : " ☒"
+
+    return m("span", pre_fields, m("span."+mark_cl, mark), post_fields, m("br"))
+  }
+}
+
+var ActionRollLog = {
+  oninit: Action.start_log,
+  view: function(e) {
+    // ----- Table Version
+    // var headers = "Player|Character|AV/OV|Roll|W/L|CS|EV/RV|RAPs".split('|')
+    // return [m(".pure-u-5-5", m("table.pure-u.pure-table#roll_log", m("thead", m("tr", headers.map(h => m("th", h)))),
+    //                          m("tbody", Action.log.map((r, i) => m(ActionLogRow, { key: 'log_'+i, roll: r })))))]
+    return [m(".pure-u-5-5#roll_log", Action.log.map((r, i) => m(ActionLogRow, { key: 'log_'+i, roll: r })))]
+  }
+}
+export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView, ActionRollLog }

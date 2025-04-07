@@ -29,7 +29,7 @@ module MEGS
           if id = cookies['sess']
             if (s = request.session) && s.id.to_s == id && s[:key] &&
                (signature = Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_SIGNATURE')) rescue nil)
-              data = %w(sess megs sig).filter { |k| !cookies[k].nil? }.map { |k| "#{k}=#{URI.encode_www_form_component(cookies[k])}" }.join('; ')
+              data = request.get_header(Rack::RACK_REQUEST_COOKIE_STRING)
               raise ArgumentError.new("verification failed") unless s[:key].verify("SHA256", signature, data)
               s.options[:skip] = false
               s
@@ -48,7 +48,7 @@ module MEGS
       attr_reader :config, :request, :headers
       def initialize(_c, req)
         @request = req
-        @headers = { 'content-type' => 'appliction/json' }
+        @headers = { 'content-type' => 'application/json' }
       end
 
       def call
@@ -56,7 +56,7 @@ module MEGS
           when ['GET',  '/login']
             session = self.class.validate_session(request)
             Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
-            [200, headers, { key: keys['public'] }.to_json]
+            [200, headers, ({ key: keys['public'] }.merge(session ? get_session_data(session) : {}).to_json)]
           when ['POST', '/login']
             data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil
             user_query = data && MEGS::DB[:users].by_username(data['u']).combine(:characters)
@@ -64,7 +64,7 @@ module MEGS
             if data && (user = user_query.first) && user[:password].is_password?(data['p']) &&
                (key = OpenSSL::PKey::RSA.new(Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_KEY'))))
               set_session(request.session, key, user)
-              [200, headers, get_session_data(request.session)]
+              [200, headers, get_session_data(request.session).to_json]
             else
               raise Error.new(401, "Unauthorized")
             end
@@ -110,7 +110,7 @@ module MEGS
        { user: s[:user].filter { |k| %i(id username name admin).include?(k) },
          chars: { 0 => s[:user][:name] }.merge(Hash[s[:chars].map do |k, v|
            [ k, v[:name] + (s[:user][:admin] ? " (#{v[:user][:name]})" : '') ]
-         end]) }.to_json
+         end]) }
       end
     end
   end

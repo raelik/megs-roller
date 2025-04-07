@@ -28,12 +28,8 @@ var Login = {
     })
   },
   setup: function(vnode) {
+    Login.processing = true
     Action.login = Login
-    Login.do_get_request('/login', {}, function(data) {
-      Login.server_key.setPublicKey(data.key)
-      // There should be a host key check here, to alert the user if the key changed.
-      localStorage.setItem("server_key", Login.server_key.getPublicKey())
-    })
     var stored_private = localStorage.getItem("private_key")
     var stored_public  = localStorage.getItem("public_key")
     if(stored_private && stored_public) {
@@ -46,6 +42,15 @@ var Login = {
       localStorage.setItem("public_key", pub) 
       Login.keys.pub.setPublicKey(pub)
     }
+    Login.do_get_request('/login', {}, function(data) {
+      Login.server_key.setPublicKey(data.key)
+      // There should be a host key check here, to alert the user if the key changed.
+      localStorage.setItem("server_key", Login.server_key.getPublicKey())
+      if(data.session) {
+        Login.data = data
+      }
+      Login.processing = false
+    })
   },
   encrypt: function(data) {
     return Login.server_key.encrypt(Object.keys(data).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&'))
@@ -86,8 +91,8 @@ var Login = {
       }
     })
     .finally(function() {
-      root.style.cursor = "auto"
       if(final_cb) { final_cb() }
+      root.style.cursor = "auto"
     })
   },
   login: function(e) {

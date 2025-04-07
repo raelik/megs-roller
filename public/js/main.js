@@ -1,5 +1,5 @@
 import { Util, Action, ActionClearButton, ActionRollButtons,
-         ActionDataView, ActionResolvedView } from "/js/action.js"
+         ActionDataView, ActionResolvedView, ActionRollLog } from "/js/action.js"
 import { Login, LoginBarView } from "/js/login.js"
 
 var Main = {
@@ -70,7 +70,8 @@ var Main = {
         m(".pure-u-1-3.centered", m("input", Main.effect_field_attrs('rv_cs')))
       ),
       m(ActionResolvedView),
-      m(LoginBarView)
+      m(LoginBarView),
+      (Util.show_log() ? m(ActionRollLog) : '')
     )]
   }
 }

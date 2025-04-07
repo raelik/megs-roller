@@ -1,5 +1,6 @@
 require 'openssl'
 require 'megs/handlers/login'
+require 'megs/db'
 
 module MEGS
   module Handlers
@@ -43,12 +44,12 @@ module MEGS
         success  = arr.pop
         @megs = Hash[MEGS_KEYS.zip(arr.map(&:to_i))]
         @megs[:last_roll] = last
-        @megs[:resolved] = true unless resolved.empty?
-        @megs[:success]  = (success == 'true') unless success.empty?
+        @megs[:resolved] = true unless resolved.to_s.empty?
+        @megs[:success]  = (success == 'true') unless success.to_s.empty?
       end
 
       def megs_cookie
-        (megs.values_at(*MEGS_KEYS) + [megs[:success].to_s, megs[:resolved].to_s] + megs[:last_roll]).join('&')
+        (megs.values_at(*MEGS_KEYS) + [megs[:success].to_s, megs[:resolved].to_s] + (megs[:last_roll] || [])).join('&')
       end
 
       def validate_cookie
@@ -79,7 +80,7 @@ module MEGS
           missing = missing_params
           raise Error.new(400, "Missing required param: #{missing.join(', ')}") unless missing.empty?
           s, h, b = self.send(request_method.downcase.to_sym)
-          set_cookies(h)
+          set_cookies(h) if megs
           [s, h, b]
         end
       rescue NoMethodError => e

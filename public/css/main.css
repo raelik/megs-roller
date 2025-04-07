@@ -56,6 +56,21 @@ span.centered {
   vertical-align: middle;
 }
 
+span.success {
+  color: green;
+  font-weight: bold;
+}
+
+span.failure {
+  color: red;
+  font-weight: bold;
+}
+
+#roll_log {
+  font-size: 12px;
+  font-family: "Courier";
+}
+
 .alert {
   background-color: red;
 }

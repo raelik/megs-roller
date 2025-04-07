@@ -10,6 +10,7 @@ module MEGS
       '/action_roll' => Handlers::ActionRoll,
       '/effect_resolve' => Handlers::EffectResolve,
       '/health' => Handlers::HealthCheck,
+      '/roll_log' => Handlers::RollLog,
       '/login' => Handlers::Login,
       '/logout' => Handlers::Login
     }.freeze
