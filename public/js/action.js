@@ -54,6 +54,9 @@ var Action = {
   data: {},
   log: [],
   login: null,
+  processing: false,
+  set_data: (d) => { Action.data = d },
+  set_log: (l) => { Action.log = l },
   has_data: function() {
     return Object.keys(Action.data).length !== 0
   },
@@ -68,6 +71,7 @@ var Action = {
       Action.data.target = d.target || ''
       Action.data.cs = ''
     }
+    Action.processing = false
   },
   do_get_request: function(url, params, cb, final_cb) {
     var root = document.body
@@ -91,34 +95,49 @@ var Action = {
     })
   },
   roll: function(e) {
-    var reroll = (e.target.id == 'reroll')
-    var params = Util.get_action_fields()
-    if(reroll) {
-      params.reroll = true
-    }
+    if(!Action.processing) {
+      Action.processing = true
+      var reroll = (e.target.id == 'reroll')
+      var params = Util.get_action_fields()
+      if(reroll) {
+        params.reroll = true
+      }
 
-    Action.do_get_request('/action_roll', params, Action.handle_two)
+      Action.do_get_request('/action_roll', params, Action.handle_two, () => { Action.processing = false })
+    }
   },
   roll_log: function(cb) {
     if(Action.login.logged_in()) {
-      Action.do_get_request('/roll_log', {}, (data) => { Action.log = data }, cb)
+      Action.do_get_request('/roll_log', {}, Action.set_log, cb)
     }
   },
   result: function(e) {
-    var params = Util.get_action_fields()
-    params.result = true
+    if(!Action.processing) {
+      Action.processing = true
+      var params = Util.get_action_fields()
+      params.result = true
 
-    Action.do_get_request('/action_roll', params, (data) => { Action.data = data })
+      Action.do_get_request('/action_roll', params, Action.set_data, () => { Action.processing = false })
+    }
   },
   resolve: function(e) {
-    var params = Util.get_effect_fields()
+    if(!Action.processing) {
+      Action.processing = true
+      var params = Util.get_effect_fields()
 
-    Action.do_get_request('/effect_resolve', params, (data) => { Action.data = data })
+      Action.do_get_request('/effect_resolve', params, Action.set_data, () => { Action.processing = false })
+    }
   },
   clear: function(e, final_cb) {
-    var params = { clear: true }
+    if(!Action.processing) {
+      Action.processing = true
+      var params = { clear: true }
 
-    Action.do_get_request('/action_roll', params, Action.do_clear, final_cb)
+      Action.do_get_request('/action_roll', params, Action.do_clear, function() {
+        Action.processing = false
+        if(final_cb) { final_cb() }
+      })
+    }
   },
   log_promise: function() {
     new Promise(r => setTimeout(r, 5000)).then(function() {

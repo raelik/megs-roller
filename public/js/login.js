@@ -96,19 +96,23 @@ var Login = {
     })
   },
   login: function(e) {
-    Login.processing = true
-    Action.clear(null, function() {
-      var user = document.getElementById('username')
-      var pass = document.getElementById('password')
-      Login.do_login_request({ u: user.value, p: pass.value }, null, () => { Login.processing = false })
-    })
+    if(!Login.processing) {
+      Login.processing = true
+      Action.clear(null, function() {
+        var user = document.getElementById('username')
+        var pass = document.getElementById('password')
+        Login.do_login_request({ u: user.value, p: pass.value }, null, () => { Login.processing = false })
+      })
+    }
   },
   logout: function(e) {
-    Login.processing = true
-    Action.clear(null, function() {
-      Login.data = {}
-      Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, null, () => { Login.processing = false })
-    })
+    if(!Login.processing) {
+      Login.processing = true
+      Action.clear(null, function() {
+        Login.data = {}
+        Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, null, () => { Login.processing = false })
+      })
+    }
   },
   center_line_height: function(vnode) {
     var nodes = vnode.dom.querySelectorAll('#login span')
