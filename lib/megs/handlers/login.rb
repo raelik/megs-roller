@@ -61,7 +61,7 @@ module MEGS
             data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil
             user_query = data && MEGS::DB[:users].by_username(data['u']).combine(:characters)
 
-            if data && (user = user_query.first) && user[:password].is_password?(data['p']) &&
+            if data && (user = user_query.first) && user.password.is_password?(data['p']) &&
                (key = OpenSSL::PKey::RSA.new(Base64.decode64(request.get_header('HTTP_X_MEGS_SESSION_KEY'))))
               set_session(request.session, key, user)
               [200, headers, get_session_data(request.session).to_json]
@@ -98,11 +98,11 @@ module MEGS
 
       def set_session(s, key, user)
         s.options[:skip] = false
-        s.merge!(key: key, user: user, current_rolls: [])
-        chars = (user[:admin] ? MEGS::DB[:characters].combine(:user).order(:user_id, :id) : user[:characters]).to_a
+        s.merge!(key: key, user: user.to_h, current_rolls: [])
+        chars = (user.admin ? MEGS::DB[:characters].combine(:user).order(:user_id, :id) : user.characters).to_a
         s[:chars] =
           Hash[chars.map do |char|
-            [char[:id], char]
+            [char.id, char.to_h]
           end]
       end
 

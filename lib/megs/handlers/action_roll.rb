@@ -58,6 +58,14 @@ module MEGS
           sum  = dice.sum
           last = megs[:last_roll]
 
+          megs.merge!(av: av, ov: ov, ov_cs: ov_cs, cs: 0, raps: 0)
+
+          indexes, target_extra = Tables.get_action_indexes(av, ov, ov_cs)
+          if indexes
+            megs.merge!(av_index: indexes[0], ov_index: indexes[1],
+                        target: Tables::ACTION_TABLE[indexes[0]][indexes[1]] + target_extra)
+          end
+
           # 2 is ALWAYS an automatic fail, even on a reroll.
           if sum == 2
             megs.merge!(success: false, total: sum)
@@ -67,13 +75,12 @@ module MEGS
             if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]
               megs[:total] = megs[:total] + sum
             else
-              megs.merge!(av: av, ov: ov, ov_cs: ov_cs, total: sum, cs: 0, raps: 0)
+              megs[:total] = sum
+            end
 
-              indexes, target_extra = Tables.get_action_indexes(av, ov, ov_cs)
-              if indexes
-                megs.merge!(av_index: indexes[0], ov_index: indexes[1],
-                            target: Tables::ACTION_TABLE[indexes[0]][indexes[1]] + target_extra)
-              end
+            if dice[0] != dice[1]
+              megs[:success] = megs[:total] >= megs[:target]
+              megs[:success] ? (megs[:cs] = calculate_cs) : log_roll
             end
           end
           megs[:last_roll] = dice

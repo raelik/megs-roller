@@ -3,7 +3,9 @@ import { Util, Action } from "/js/action.js"
 var Login = {
   data: {},
   processing: false,
+  end_processing: () => { Login.processing = false },
   logged_in: () => { return Object.keys(Login.data).length !== 0 },
+  timeout_interval: null,
   server_key: new JSEncrypt(),
   keys: { priv: new JSEncrypt(),
           pub: new JSEncrypt() },
@@ -27,6 +29,21 @@ var Login = {
       if(final_cb) { final_cb() }
     })
   },
+  setup_timeout: function() {
+    // Run the check every 2 minutes
+    if(Login.timeout_interval == null) {
+      Login.timeout_interval = setInterval(Login.check_timeout, 120000)
+    }
+  },
+  clear_timeout: function() {
+    if(Login.timeout_interval) { clearInterval(Login.timeout_interval) }
+  },
+  check_timeout: function() {
+    // Time out after 10 minutes of inactivity
+    if((Date.now() - Action.last_request) > 600000) {
+      Login.logout()
+    }
+  },
   setup: function(vnode) {
     Login.processing = true
     Action.login = Login
@@ -48,8 +65,9 @@ var Login = {
       localStorage.setItem("server_key", Login.server_key.getPublicKey())
       if(data.session) {
         Login.data = data.session
+        Login.setup_timeout()
       }
-      Login.processing = false
+      Login.end_processing()
     })
   },
   encrypt: function(data) {
@@ -79,15 +97,15 @@ var Login = {
       if(err.code == 401) {
         var creds = ['username','password'].map((id) => { return document.getElementById(id) })
         creds.forEach((e) => { e.classList.add('alert') })
-        new Promise(r => setTimeout(r, 250)).then(function() {
+        setTimeout(function() {
           creds.forEach(function(e) {
             e.classList.add('fade')
             e.classList.remove('alert')
           })
-          new Promise(r2 => setTimeout(r2, 1000)).then(function() {
+          setTimeout(function() {
             creds.forEach((e) => { e.classList.remove('fade') })
-          })
-        })
+          }, 1000)
+        }, 250)
       }
     })
     .finally(function() {
@@ -101,7 +119,7 @@ var Login = {
       Action.clear(null, function() {
         var user = document.getElementById('username')
         var pass = document.getElementById('password')
-        Login.do_login_request({ u: user.value, p: pass.value }, null, () => { Login.processing = false })
+        Login.do_login_request({ u: user.value, p: pass.value }, Login.setup_timeout, Login.end_processing)
       })
     }
   },
@@ -110,7 +128,7 @@ var Login = {
       Login.processing = true
       Action.clear(null, function() {
         Login.data = {}
-        Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, null, () => { Login.processing = false })
+        Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, Login.clear_timeout, Login.end_processing)
       })
     }
   },

@@ -17,10 +17,12 @@ var Main = {
       viewport.content = 'width=device-width';
     }
 
-    if(Util.show_roll()) {
-      document.getElementById('av').focus({ focusVisible: true })
-    } else if (Action.data.success && !Action.data.resolved) {
-      document.getElementById('ev').focus({ focusVisible: true })
+    if(Action.selected_row == null && document.activeElement.tagName != 'INPUT') {
+      if(Util.show_roll()) {
+        document.getElementById('av').focus()
+      } else if (Action.data.success && !Action.data.resolved) {
+        document.getElementById('ev').focus()
+      }
     }
   },
   text_field_attrs: function(id) {
@@ -41,7 +43,7 @@ var Main = {
   result_text: function() {
     return Util.show_result() ? ("Action " + (Action.data.success ? "Succeeded!" : "FAILED.")) : ""
   },
-  view: function(e) {
+  view: function(vnode) {
     var check = Main.check_action_field
     return [ m(".pure-g",
       m(".pure-u-1-4.centered", m(ActionClearButton)),

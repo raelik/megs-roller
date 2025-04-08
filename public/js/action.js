@@ -53,10 +53,25 @@ var Util = {
 var Action = {
   data: {},
   log: [],
+  log_data: {},
   login: null,
+  log_processing: false,
   processing: false,
+  last_request: null,
+  end_processing: function() {
+    Action.processing = false
+    document.activeElement.blur()
+  },
+  modal: null,
+  log_detail: null,
+  selected_row: null,
+  log_interval: null,
   set_data: (d) => { Action.data = d },
-  set_log: (l) => { Action.log = l },
+  set_log: function(l) {
+    Action.log = l.map(r => r.hash_key)
+    l.forEach((r) => { Action.log_data[r.hash_key] = r })
+    Action.log_processing = false
+  },
   has_data: function() {
     return Object.keys(Action.data).length !== 0
   },
@@ -71,7 +86,6 @@ var Action = {
       Action.data.target = d.target || ''
       Action.data.cs = ''
     }
-    Action.processing = false
   },
   do_get_request: function(url, params, cb, final_cb) {
     var root = document.body
@@ -90,6 +104,7 @@ var Action = {
     ])
     .catch(err => null)
     .finally(function() {
+      if(url != '/roll_log') { Action.last_request = Date.now() }
       if(final_cb) { final_cb() }
       root.style.cursor = "auto"
     })
@@ -103,12 +118,15 @@ var Action = {
         params.reroll = true
       }
 
-      Action.do_get_request('/action_roll', params, Action.handle_two, () => { Action.processing = false })
+      Action.do_get_request('/action_roll', params, Action.handle_two, Action.end_processing)
     }
   },
-  roll_log: function(cb) {
+  get_roll_log: function(cb) {
     if(Action.login.logged_in()) {
+      Action.log_processing = true
       Action.do_get_request('/roll_log', {}, Action.set_log, cb)
+    } else if(Action.log_interval) {
+      clearInterval(Action.log_interval)
     }
   },
   result: function(e) {
@@ -117,7 +135,7 @@ var Action = {
       var params = Util.get_action_fields()
       params.result = true
 
-      Action.do_get_request('/action_roll', params, Action.set_data, () => { Action.processing = false })
+      Action.do_get_request('/action_roll', params, Action.set_data, Action.end_processing)
     }
   },
   resolve: function(e) {
@@ -125,7 +143,7 @@ var Action = {
       Action.processing = true
       var params = Util.get_effect_fields()
 
-      Action.do_get_request('/effect_resolve', params, Action.set_data, () => { Action.processing = false })
+      Action.do_get_request('/effect_resolve', params, Action.set_data, Action.end_processing)
     }
   },
   clear: function(e, final_cb) {
@@ -134,26 +152,49 @@ var Action = {
       var params = { clear: true }
 
       Action.do_get_request('/action_roll', params, Action.do_clear, function() {
-        Action.processing = false
+        Action.end_processing()
         if(final_cb) { final_cb() }
       })
     }
   },
-  log_promise: function() {
-    new Promise(r => setTimeout(r, 5000)).then(function() {
-      Action.roll_log(function() {
-        if(Action.login.logged_in()) {
-          Action.log_promise();
-        }
-      })
-    })
+  setup_log_detail: function(vnode) {
+    Action.modal      = document.getElementById('modal')
+    Action.log_detail = document.getElementById('log_detail')
+    Action.log_close  = document.getElementById('log_close')
+    Action.modal.style.height = document.getElementById('roll_log').offsetTop + 'px'
+  },
+  setup_log_row: function(vnode) {
+    vnode.dom.removeEventListener('log_click', Action.show_log_detail)
+    vnode.dom.addEventListener('log_click', Action.show_log_detail)
   },
   start_log: function(vnode) {
-    Action.roll_log(function() {
+    Action.get_roll_log(function() {
       if(Action.login.logged_in()) {
-        Action.log_promise();
+        Action.log_interval = setInterval(Action.get_roll_log, 5000);
       }
     })
+  },
+  show_log_detail: function(e) {
+    if(Action.log_processing === true) {
+       window.setTimeout(Action.show_log_detail, 100, e); /* this checks the flag every 100 milliseconds*/
+    } else {
+      if(Action.selected_row) { document.getElementById(Action.selected_row).classList.remove('selected') }
+      Action.selected_row = e.target.id
+      e.target.classList.add('selected')
+
+      var roll_log = document.getElementById('roll_log')
+      log_detail.style.width  = (roll_log.offsetWidth - 25) + 'px'
+      log_detail.style.height = (roll_log.offsetTop - 25) + 'px'
+      modal.style.display = 'block'
+      document.activeElement.blur()
+    }
+  },
+  close_log_detail: function(e) {
+    if(e.target == modal || e.target == log_close) {
+      document.getElementById(Action.selected_row).classList.remove('selected')
+      modal.style.display = 'none'
+      Action.selected_row = null
+    }
   }
 }
 
@@ -161,7 +202,7 @@ var Action = {
 var ActionClearButton = {
   oncreate: Util.center_line_height,
   onupdate: Util.center_line_height,
-  view: function(e) {
+  view: function(vnode) {
     return [ m("span.centered", m("a.pure-button", { onclick: Action.clear }, "Clear")) ]
   }
 }
@@ -169,7 +210,7 @@ var ActionClearButton = {
 var ActionRollButtons = {
   oncreate: Util.center_line_height,
   onupdate: Util.center_line_height,
-  view: function(e) {
+  view: function(vnode) {
     return [ m("span.centered",
       Util.show_roll()    ? m("a.pure-button", { id: 'roll',   onclick: Action.roll }, "Roll")   : "",
       Util.show_reroll()  ? m("a.pure-button", { id: 'reroll', onclick: Action.roll }, "Reroll") : "",
@@ -181,7 +222,7 @@ var ActionRollButtons = {
 }
 
 var ActionDataView = {
-  view: function(e) {
+  view: function(vnode) {
     var data = Action.data
     return Object.keys(data).length === 0 ? [] : [
       m(".pure-u-1-3.centered", "Total: "+data.total, m("br"), "Dice: "+data.last_roll.join(', ')),
@@ -192,46 +233,66 @@ var ActionDataView = {
 }
 
 var ActionResolvedView = {
-  view: function(e) {
+  view: function(vnode) {
     return [ m(".pure-u-5-5", { style: Action.data.resolved ? "text-align: center; color: white; background-color: green" :
 	                                                      "display: none" }, "RAPs: " + Action.data.raps) ]
   }
 }
 
+var ActionLogDetail = {
+  view: function(vnode) {
+    var detail_table = []
+    if(Action.selected_row) {
+
+      var r       = Action.log_data[Action.selected_row]
+      var mark_cl = r.success ? "success" : "failure"
+      var mark    = r.success ? "&#x2611;" : "&#x2612;"
+      detail_table = [m("table",
+                        m("tr", m("td.hd", "Timestamp"), m("td", { colspan: 3, width: '100%' }, r.timestamp), m("td#log_close","❌")),
+                        m("tr", m("td.hd", "Character"), m("td", r.character), m("td.hd", "Owner"), m("td", { colspan: 2}, r.owner)),
+                        m("tr", m("td.hd", "User"), m("td", r.user),
+                                m("td.hd", "AV/OV"),
+                                m("td", { colspan: 2 }, r.av + ' / ' + r.ov + (r.ov_cs ? ' (' + r.ov_cs + ')' : ''))),
+                        m("tr", m("td.hd", "Target"), m("td", r.target), m("td.hd", "Total"), m("td", { colspan: 2}, r.total)),
+                        m("tr", m("td.hd", "Success"), m("td."+mark_cl, m.trust(mark)), m("td.hd", "Rolls"),
+                                m("td", { colspan: 2 }, r.rolls.flat().join(', '))),
+                        m("tr", m("td.hd", "CS"), m("td", r.cs),
+                                m("td.hd", "EV/RV"),
+                                m("td", { colspan: 2 },(r.ev == null ? '' : r.ev + ' / ' + r.rv) + (r.rv_cs ? ' (' + r.rv_cs + ')' : ''))),
+                        m("tr", m("td.hd", "RAPs"), m("td", { colspan: 4 }, r.raps)))]
+    }
+    return [m("#log_detail", detail_table)]
+  }
+}
+
 var ActionLogRow = {
-  view: function(e) {
-    var roll = e.attrs.roll
-    // ----- UL/LI version
-    // var trailer = roll.success ? [('CS: ' + roll.cs), (roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : '')),
-    //                              ('RAPs: ' + roll.raps)] : []
-    // return m("li", [roll.user, roll.character, (roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : '')),
-    //                (roll.total + " vs. " + roll.target + ' (' + (roll.success ? 'SUCCESS' : 'FAIL') + ')')].concat(trailer).join(' - '))
-    // ☑ &#x2611; ☒ &#x2612;
-    // ----- Table Version
-    // return m("tr", m("td", roll.user), m("td", roll.character), m("td.centered", roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : '')),
-    //               m("td.centered", roll.total + " vs. " + roll.target), m("td.centered", roll.success ? m("span.success", "☑") : m("span.failure", "☒")),
-    //               m("td.centered", roll.cs), m("td.centered", roll.ev ? (roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : '')) : ''),
-    //               m("td.centered", roll.raps))
+  oncreate: Action.setup_log_row,
+  view: function(vnode) {
+    var key  = vnode.attrs.key
+    var roll = Action.log_data[key]
+    var mark_cl     = roll.success ? "success" : "failure"
+    var mark        = roll.success ? " &#x2611;" : " &#x2612;"
+    var post_fields = roll.success ? ', ' +
+      ['CS: ' + roll.cs, 'E/R: ' + roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : ''), 'RAPs: ' + roll.raps].join(', ') : ''
     var pre_fields  = [roll.character ? (roll.character + ' (' + roll.user + ')') : roll.user,
                        'A/O: ' + roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : ''),
                        roll.total + " v " + roll.target].join(', ')
-    var post_fields = roll.success ? ', ' +
-      ['CS: ' + roll.cs, 'E/R: ' + roll.ev + '/' + roll.rv + (roll.rv_cs ? (' (' + roll.rv_cs + ')') : ''), 'RAPs: ' + roll.raps].join(', ') : ''
-    var mark_cl     = roll.success ? "success" : "failure"
-    var mark        = roll.success ? " ☑" : " ☒"
 
-    return m("span", pre_fields, m("span."+mark_cl, mark), post_fields, m("br"))
+    return m("span.log_row", { id: key, onclick: Action.show_log_detail }, pre_fields, m("span."+mark_cl, m.trust(mark)), post_fields, m("br"))
   }
 }
 
 var ActionRollLog = {
   oninit: Action.start_log,
-  view: function(e) {
-    // ----- Table Version
-    // var headers = "Player|Character|AV/OV|Roll|W/L|CS|EV/RV|RAPs".split('|')
-    // return [m(".pure-u-5-5", m("table.pure-u.pure-table#roll_log", m("thead", m("tr", headers.map(h => m("th", h)))),
-    //                          m("tbody", Action.log.map((r, i) => m(ActionLogRow, { key: 'log_'+i, roll: r })))))]
-    return [m(".pure-u-5-5#roll_log", Action.log.map((r, i) => m(ActionLogRow, { key: 'log_'+i, roll: r })))]
+  oncreate: Action.setup_log_detail,
+  onupdate: function(vnode) {
+    var e = document.getElementById('roll_log')
+    e.style.height = (window.innerHeight - e.offsetTop) + 'px'
+  },
+  view: function(vnode) {
+    return [m(".pure-u-5-5.centered#roll_log_header", m.trust("———————— &nbsp;Recent Rolls&nbsp; ————————")),
+            m(".pure-u-5-5#roll_log", Action.log.map(r => m(ActionLogRow, { key: r }))),
+            m("#modal", { onclick: Action.close_log_detail }, m(ActionLogDetail))]
   }
 }
 export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView, ActionRollLog }

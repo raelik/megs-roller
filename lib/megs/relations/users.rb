@@ -1,6 +1,11 @@
 require 'argon2id'
 
 module MEGS
+  module Entities
+    class User < ROM::Struct
+    end
+  end
+
   module Relations
     class Users < ROM::Relation[:sql]
       Boolean  = Types::Integer.constructor(->(bool) { bool ? 1 : 0 })
@@ -15,6 +20,9 @@ module MEGS
           has_many :rolls
         end
       end
+
+      struct_namespace MEGS::Entities
+      auto_struct true
     end
   end
 end
