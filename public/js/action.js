@@ -187,6 +187,7 @@ var Action = {
       log_detail.style.height = (roll_log.offsetTop - 25) + 'px'
       modal.style.display = 'block'
       document.activeElement.blur()
+      Action.last_request = Date.now()
     }
   },
   close_log_detail: function(e) {
