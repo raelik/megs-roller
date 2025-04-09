@@ -7,26 +7,39 @@ require 'mmh3'
 module MEGS
   module Entities
     class Roll < ROM::Struct
+      # This bears explanation. To create a compact, unique search key of the primary
+      # key (the timestamp and session_id), we concatenate the hexadecimal integer
+      # timestamp (0-padded) with the session id, convert that string to actual binary
+      # bytes, and get the base64-encoded representation of the binary blob.
+      def raw_search_key
+        Base64.encode64((timestamp.to_s(16).rjust(16,'0') + session_id).chars.
+                        each_slice(2).to_a.map { |x| x.join.hex.chr }.join).strip
+      end
+
+      # This spits out the original timestamp and session_id
+      def self.decode_search_key(search_key) 
+        bytes = Base64.decode64(search_key).bytes
+        [bytes[0..7].map { |x| x.to_s(16).rjust(2,'0') }.join.hex,
+         bytes[8..-1].map { |x| x.to_s(16).rjust(2,'0') }.join]
+      end
+
+      # Just a MurmurHash3 hash of the search key
       def hash_key
-        # This bears explanation. To create a compact, unique hash key of the primary
-        # key (the timestamp and session_id), we convert the timestamp to milliseconds,
-        # concatenate its 0-padded hex representation with the session id, convert that
-        # string to actual binary bytes, get the base64-encoded representation of THAT
-        # binary blob, then spit out a hex-encoded MurmurHash3 of said base64. Phew.
-        "%x" % Mmh3.hash128(Base64.encode64(('0'+ ('%x' % (timestamp.to_time.to_f * 1000000).to_i) + session_id).upcase.
-                                            chars.each_slice(2).to_a.map { |x| "0x#{x.join}".to_i(16).chr }.join))
+        "%x" % Mmh3.hash128(raw_search_key)
+      end
+
+      def formatted_timestamp
+        Time.at(timestamp / 10000000.0).to_datetime
       end
     end
   end
 
   module Relations
     class Rolls < ROM::Relation[:sql]
-      Timestamp = Types::Integer.constructor(->(ts) { (ts.to_f * 10000000).to_i })
       JsonArray = Types::String.constructor(->(arr) { arr.to_json })
       Boolean   = Types::Integer.constructor(->(bool) { bool ? 1 : 0 })
 
       schema(:rolls, infer: true) do
-        attribute :timestamp, Timestamp, read: Types.Constructor(DateTime, ->(ts) { Time.at(ts / 10000000.0).to_datetime })
         attribute :success, Boolean, read: Types::Params::Bool
         attribute :rolls, JsonArray, read: Types.Constructor(Array, ->(r) { JSON.parse(r) })
 

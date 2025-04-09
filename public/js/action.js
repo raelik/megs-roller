@@ -67,9 +67,26 @@ var Action = {
   selected_row: null,
   log_interval: null,
   set_data: (d) => { Action.data = d },
-  set_log: function(l) {
-    Action.log = l.map(r => r.hash_key)
+  init_log: (l) => { Action.set_log(false, l) },
+  update_log: (l) => { Action.set_log(true, l) },
+  set_log: function(update, l) {
     l.forEach((r) => { Action.log_data[r.hash_key] = r })
+    if(update) {
+      l.map(r => r.hash_key).forEach(r => Action.log.unshift(r))
+    } else {
+      Action.log = l.map(r => r.hash_key)
+    }
+
+    if(update && Action.log.length > 50) {
+      var last = null
+      while(Action.log.length > 50) {
+        if(last = Action.selected_row) {
+          document.getElementById('log_close').click()
+        }
+        last = Action.log.pop()
+        delete Action.log_data[last]
+      }
+    }
     Action.log_processing = false
   },
   has_data: function() {
@@ -87,15 +104,16 @@ var Action = {
       Action.data.cs = ''
     }
   },
-  do_get_request: function(url, params, cb, final_cb) {
+  do_get_request: function(url, h, params, cb, final_cb) {
     var root = document.body
     root.style.cursor = "wait"
+    var headers = Object.assign(h, Action.login.logged_in() ? { 'X-MEGS-Session-Signature': Action.login.sign() } : {})
 
     Promise.all([
       m.request({
         method: "GET",
         url: url,
-        headers: (Action.login.logged_in() ? { 'X-MEGS-Session-Signature': Action.login.sign() } : {}),
+        headers: headers,
         params: params
       })
       .then(function(d) {
@@ -118,13 +136,14 @@ var Action = {
         params.reroll = true
       }
 
-      Action.do_get_request('/action_roll', params, Action.handle_two, Action.end_processing)
+      Action.do_get_request('/action_roll', {}, params, Action.handle_two, Action.end_processing)
     }
   },
-  get_roll_log: function(cb) {
+  get_roll_log: function(latest, cb) {
     if(Action.login.logged_in()) {
       Action.log_processing = true
-      Action.do_get_request('/roll_log', {}, Action.set_log, cb)
+      var headers = (latest ? { 'X-MEGS-Search-Key': Action.log_data[Action.log[0]].search_key } : {})
+      Action.do_get_request('/roll_log', headers, {}, (latest ? Action.update_log : Action.init_log), cb)
     } else if(Action.log_interval) {
       clearInterval(Action.log_interval)
     }
@@ -135,7 +154,7 @@ var Action = {
       var params = Util.get_action_fields()
       params.result = true
 
-      Action.do_get_request('/action_roll', params, Action.set_data, Action.end_processing)
+      Action.do_get_request('/action_roll', {}, params, Action.set_data, Action.end_processing)
     }
   },
   resolve: function(e) {
@@ -143,7 +162,7 @@ var Action = {
       Action.processing = true
       var params = Util.get_effect_fields()
 
-      Action.do_get_request('/effect_resolve', params, Action.set_data, Action.end_processing)
+      Action.do_get_request('/effect_resolve', {}, params, Action.set_data, Action.end_processing)
     }
   },
   clear: function(e, final_cb) {
@@ -151,7 +170,7 @@ var Action = {
       Action.processing = true
       var params = { clear: true }
 
-      Action.do_get_request('/action_roll', params, Action.do_clear, function() {
+      Action.do_get_request('/action_roll', {}, params, Action.do_clear, function() {
         Action.end_processing()
         if(final_cb) { final_cb() }
       })
@@ -168,31 +187,34 @@ var Action = {
     vnode.dom.addEventListener('log_click', Action.show_log_detail)
   },
   start_log: function(vnode) {
-    Action.get_roll_log(function() {
+    Action.get_roll_log(false, function() {
       if(Action.login.logged_in()) {
-        Action.log_interval = setInterval(Action.get_roll_log, 5000);
+        Action.log_interval = setInterval(Action.get_roll_log, 5000, true);
       }
     })
   },
   show_log_detail: function(e) {
     if(Action.log_processing === true) {
-       window.setTimeout(Action.show_log_detail, 100, e); /* this checks the flag every 100 milliseconds*/
+      e.redraw = false
+      window.setTimeout(Action.show_log_detail, 100, e); /* this checks the flag every 100 milliseconds*/
     } else {
-      if(Action.selected_row) { document.getElementById(Action.selected_row).classList.remove('selected') }
-      Action.selected_row = e.target.id
-      e.target.classList.add('selected')
+      e.redraw = true
+      if(e.target.id != 'roll_log') {
+        var target = (e.target.id == '' ? e.target.parentElement : e.target)
+        Action.selected_row = target.id
+        e.target.classList.add('selected')
 
-      var roll_log = document.getElementById('roll_log')
-      log_detail.style.width  = (roll_log.offsetWidth - 25) + 'px'
-      log_detail.style.height = (roll_log.offsetTop - 25) + 'px'
-      modal.style.display = 'block'
-      document.activeElement.blur()
-      Action.last_request = Date.now()
+        var roll_log = document.getElementById('roll_log')
+        log_detail.style.width  = (roll_log.offsetWidth - 25) + 'px'
+        log_detail.style.height = (roll_log.offsetTop - 25) + 'px'
+        modal.style.display = 'block'
+        document.activeElement.blur()
+        Action.last_request = Date.now()
+      }
     }
   },
   close_log_detail: function(e) {
     if(e.target == modal || e.target == log_close) {
-      document.getElementById(Action.selected_row).classList.remove('selected')
       modal.style.display = 'none'
       Action.selected_row = null
     }
@@ -244,23 +266,23 @@ var ActionLogDetail = {
   view: function(vnode) {
     var detail_table = []
     if(Action.selected_row) {
-
       var r       = Action.log_data[Action.selected_row]
       var mark_cl = r.success ? "success" : "failure"
       var mark    = r.success ? "&#x2611;" : "&#x2612;"
       detail_table = [m("table",
-                        m("tr", m("td.hd", "Timestamp"), m("td", { colspan: 3, width: '100%' }, r.timestamp), m("td#log_close","❌")),
-                        m("tr", m("td.hd", "Character"), m("td", r.character), m("td.hd", "Owner"), m("td", { colspan: 2}, r.owner)),
+                        m("tr", m("td.hd", "Timestamp"), m("td#timestamp", r.timestamp), m("td#log_close","❌"))),
+                      m("table",
+                        m("tr", m("td.hd", "Character"), m("td", r.character), m("td.hd2", "Owner"), m("td", r.owner)),
                         m("tr", m("td.hd", "User"), m("td", r.user),
-                                m("td.hd", "AV/OV"),
-                                m("td", { colspan: 2 }, r.av + ' / ' + r.ov + (r.ov_cs ? ' (' + r.ov_cs + ')' : ''))),
-                        m("tr", m("td.hd", "Target"), m("td", r.target), m("td.hd", "Total"), m("td", { colspan: 2}, r.total)),
-                        m("tr", m("td.hd", "Success"), m("td."+mark_cl, m.trust(mark)), m("td.hd", "Rolls"),
-                                m("td", { colspan: 2 }, r.rolls.flat().join(', '))),
+                                m("td.hd2", "AV/OV"),
+                                m("td", r.av + ' / ' + r.ov + (r.ov_cs ? ' (' + r.ov_cs + ')' : ''))),
+                        m("tr", m("td.hd", "Target"), m("td", r.target), m("td.hd2", "Total"), m("td", r.total)),
+                        m("tr", m("td.hd", "Success"), m("td."+mark_cl, m.trust(mark)), m("td.hd2", "Rolls"),
+                                m("td", r.rolls.flat().join(', '))),
                         m("tr", m("td.hd", "CS"), m("td", r.cs),
-                                m("td.hd", "EV/RV"),
-                                m("td", { colspan: 2 },(r.ev == null ? '' : r.ev + ' / ' + r.rv) + (r.rv_cs ? ' (' + r.rv_cs + ')' : ''))),
-                        m("tr", m("td.hd", "RAPs"), m("td", { colspan: 4 }, r.raps)))]
+                                m("td.hd2", "EV/RV"),
+                                m("td", (r.ev == null ? '' : r.ev + ' / ' + r.rv) + (r.rv_cs ? ' (' + r.rv_cs + ')' : ''))),
+                        m("tr", m("td.hd", "RAPs"), m("td", { colspan: 3 }, r.raps)))]
     }
     return [m("#log_detail", detail_table)]
   }
@@ -269,7 +291,7 @@ var ActionLogDetail = {
 var ActionLogRow = {
   oncreate: Action.setup_log_row,
   view: function(vnode) {
-    var key  = vnode.attrs.key
+    var key  = vnode.attrs.hash_key
     var roll = Action.log_data[key]
     var mark_cl     = roll.success ? "success" : "failure"
     var mark        = roll.success ? " &#x2611;" : " &#x2612;"
@@ -279,7 +301,8 @@ var ActionLogRow = {
                        'A/O: ' + roll.av + '/' + roll.ov + (roll.ov_cs ? (' (' + roll.ov_cs + ')') : ''),
                        roll.total + " v " + roll.target].join(', ')
 
-    return m("span.log_row", { id: key, onclick: Action.show_log_detail }, pre_fields, m("span."+mark_cl, m.trust(mark)), post_fields, m("br"))
+    return m("span.log_row"+(Action.selected_row == key ? '.selected' : ''), { key: key, id: key },
+             pre_fields, m("span."+mark_cl, m.trust(mark)), post_fields, m("br"))
   }
 }
 
@@ -292,7 +315,7 @@ var ActionRollLog = {
   },
   view: function(vnode) {
     return [m(".pure-u-5-5.centered#roll_log_header", m.trust("———————— &nbsp;Recent Rolls&nbsp; ————————")),
-            m(".pure-u-5-5#roll_log", Action.log.map(r => m(ActionLogRow, { key: r }))),
+            m(".pure-u-5-5#roll_log", { onclick: Action.show_log_detail }, Action.log.map(k => m(ActionLogRow, { hash_key: k }))),
             m("#modal", { onclick: Action.close_log_detail }, m(ActionLogDetail))]
   }
 }

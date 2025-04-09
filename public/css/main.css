@@ -76,6 +76,12 @@ span.failure, td.failure {
   font-size: 12px;
   font-family: monospace;
   overflow-y: auto;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 #roll_log span.log_row {
@@ -120,7 +126,10 @@ span.failure, td.failure {
 #log_detail table {
   font-size: 12px;
   width: 100%;
-  border: 1px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  border-collapse: collapse;
 }
 
 #log_detail table tr {
@@ -129,17 +138,30 @@ span.failure, td.failure {
 
 #log_detail table tr td {
   padding: 2.5px 5px;
+  width: 166px;
+}
+
+#log_detail table tr td#timestamp {
+  width: 100%;
 }
 
 #log_detail table tr td.hd {
   font-weight: bold;
+  width: 65px;
 }
 
-#log_close {
+#log_detail table tr td.hd2 {
+  font-weight: bold;
+  width: 48px;
+}
+
+#log_detail table tr td#log_close {
   cursor: pointer;
-  padding: 5px;
   color: red;
-  width: 12px;
+  width: 10px;
+  padding: 2.5px 6px;
+  font-size: 10px;
+  font-weight: bold;
 }
 
 .alert {

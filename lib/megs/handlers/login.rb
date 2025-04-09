@@ -98,7 +98,9 @@ module MEGS
 
       def set_session(s, key, user)
         s.options[:skip] = false
-        s.merge!(key: key, user: user.to_h, current_rolls: [])
+        cipher = OpenSSL::Cipher::AES.new(128, :CFB)
+        s.merge!(key: key, user: user.to_h, current_rolls: [],
+                 cipher: { key: cipher.random_key, iv: cipher.random_iv })
         chars = (user.admin ? MEGS::DB[:characters].combine(:user).order(:user_id, :id) : user.characters).to_a
         s[:chars] =
           Hash[chars.map do |char|

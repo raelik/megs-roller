@@ -92,8 +92,8 @@ module MEGS
       end
 
       def log_roll
-        MEGS::DB[:rolls].changeset(:create, { timestamp: Time.now, session_id: session.id.to_s, user_id: megs[:user],
-                                              character_id: megs[:char] == 0 ? nil : megs[:char],
+        MEGS::DB[:rolls].changeset(:create, { timestamp: (Time.now.to_f * 10000000).to_i, session_id: session.id.to_s,
+                                              user_id: megs[:user], character_id: megs[:char] == 0 ? nil : megs[:char],
                                               rolls: session[:current_rolls] }.merge(log_fields)).commit if session
       end
 
