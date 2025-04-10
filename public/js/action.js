@@ -62,8 +62,6 @@ var Action = {
     Action.processing = false
     document.activeElement.blur()
   },
-  modal: null,
-  log_detail: null,
   selected_row: null,
   log_interval: null,
   set_data: (d) => { Action.data = d },
@@ -144,6 +142,7 @@ var Action = {
       Action.log_processing = true
       var headers = (latest ? { 'X-MEGS-Search-Key': Action.log_data[Action.log[0]].search_key } : {})
       Action.do_get_request('/roll_log', headers, {}, (latest ? Action.update_log : Action.init_log), cb)
+      if(latest) { m.redraw() }
     } else if(Action.log_interval) {
       clearInterval(Action.log_interval)
     }
@@ -176,11 +175,10 @@ var Action = {
       })
     }
   },
-  setup_log_detail: function(vnode) {
-    Action.modal      = document.getElementById('modal')
-    Action.log_detail = document.getElementById('log_detail')
-    Action.log_close  = document.getElementById('log_close')
-    Action.modal.style.height = document.getElementById('roll_log').offsetTop + 'px'
+  set_modal_height: function(vnode) {
+    var roll_log = vnode.dom
+    var modal    = roll_log.children[0]
+    modal.style.height = roll_log.offsetTop + 'px'
   },
   setup_log_row: function(vnode) {
     vnode.dom.removeEventListener('log_click', Action.show_log_detail)
@@ -193,29 +191,42 @@ var Action = {
       }
     })
   },
-  show_log_detail: function(e) {
+  show_log_detail: function(e, manual_redraw) {
     if(Action.log_processing === true) {
       e.redraw = false
-      window.setTimeout(Action.show_log_detail, 100, e); /* this checks the flag every 100 milliseconds*/
+      window.setTimeout(Action.show_log_detail, 100, e, true); /* this checks the flag every 100 milliseconds*/
     } else {
       e.redraw = true
-      if(e.target.id != 'roll_log') {
-        var target = (e.target.id == '' ? e.target.parentElement : e.target)
+      if(e.target.id != 'roll_log' && e.target) {
+        var target   = (e.target.id == '' ? e.target.parentElement : e.target)
+        var roll_log = target.parentElement
+        var detail   = target.parentElement.children[0].children[0] 
+        Action.reposition_log_detail(detail)
+        if(Action.selected_row) { roll_log.children[Action.selected_row].classList.remove('selected') }
         Action.selected_row = target.id
         e.target.classList.add('selected')
 
-        var roll_log = document.getElementById('roll_log')
-        log_detail.style.width  = (roll_log.offsetWidth - 25) + 'px'
-        log_detail.style.height = (roll_log.offsetTop - 25) + 'px'
-        modal.style.display = 'block'
-        document.activeElement.blur()
         Action.last_request = Date.now()
+        document.activeElement.blur()
+        if(manual_redraw) { m.redraw() }
       }
     }
   },
+  reposition_log_detail: function(detail) {
+    var modal    = detail.parentElement
+    var roll_log = modal.parentElement
+    if(Action.selected_row) {
+      var height = detail.offsetHeight
+      detail.style.width = (roll_log.offsetWidth - 25) + 'px'
+      detail.style.top   = (roll_log.offsetTop - height - 5) + 'px';
+      modal.style.zIndex = '1'
+    } else {
+      modal.style.zIndex = '-1'
+    }
+  },
   close_log_detail: function(e) {
+    e.stopPropagation()
     if(e.target == modal || e.target == log_close) {
-      modal.style.display = 'none'
       Action.selected_row = null
     }
   }
@@ -226,7 +237,7 @@ var ActionClearButton = {
   oncreate: Util.center_line_height,
   onupdate: Util.center_line_height,
   view: function(vnode) {
-    return [ m("span.centered", m("a.pure-button", { onclick: Action.clear }, "Clear")) ]
+    return m("span.centered", m("a.pure-button", { onclick: Action.clear }, "Clear"))
   }
 }
 
@@ -234,13 +245,12 @@ var ActionRollButtons = {
   oncreate: Util.center_line_height,
   onupdate: Util.center_line_height,
   view: function(vnode) {
-    return [ m("span.centered",
+    return m("span.centered",
       Util.show_roll()    ? m("a.pure-button", { id: 'roll',   onclick: Action.roll }, "Roll")   : "",
       Util.show_reroll()  ? m("a.pure-button", { id: 'reroll', onclick: Action.roll }, "Reroll") : "",
       Util.show_break()   ? m("br") : "",
       Util.show_submit()  ? m("a.pure-button", { onclick: Action.result }, "Submit")   : "",
-      Util.show_resolve() ? m("a.pure-button", { onclick: Action.resolve }, "Resolve") : ""
-    )]
+      Util.show_resolve() ? m("a.pure-button", { onclick: Action.resolve }, "Resolve") : "")
   }
 }
 
@@ -257,12 +267,13 @@ var ActionDataView = {
 
 var ActionResolvedView = {
   view: function(vnode) {
-    return [ m(".pure-u-5-5", { style: Action.data.resolved ? "text-align: center; color: white; background-color: green" :
-	                                                      "display: none" }, "RAPs: " + Action.data.raps) ]
+    return m(".pure-u-5-5", { style: Action.data.resolved ? "text-align: center; color: white; background-color: green" :
+	                                                    "display: none" }, "RAPs: " + Action.data.raps)
   }
 }
 
 var ActionLogDetail = {
+  onupdate: (v) => Action.reposition_log_detail(v.dom),
   view: function(vnode) {
     var detail_table = []
     if(Action.selected_row) {
@@ -284,7 +295,7 @@ var ActionLogDetail = {
                                 m("td", (r.ev == null ? '' : r.ev + ' / ' + r.rv) + (r.rv_cs ? ' (' + r.rv_cs + ')' : ''))),
                         m("tr", m("td.hd", "RAPs"), m("td", { colspan: 3 }, r.raps)))]
     }
-    return [m("#log_detail", detail_table)]
+    return m("#log_detail", detail_table)
   }
 }
 
@@ -308,15 +319,15 @@ var ActionLogRow = {
 
 var ActionRollLog = {
   oninit: Action.start_log,
-  oncreate: Action.setup_log_detail,
+  oncreate: Action.set_modal_height,
   onupdate: function(vnode) {
-    var e = document.getElementById('roll_log')
+    var e = vnode.dom
     e.style.height = (window.innerHeight - e.offsetTop) + 'px'
   },
   view: function(vnode) {
-    return [m(".pure-u-5-5.centered#roll_log_header", m.trust("———————— &nbsp;Recent Rolls&nbsp; ————————")),
-            m(".pure-u-5-5#roll_log", { onclick: Action.show_log_detail }, Action.log.map(k => m(ActionLogRow, { hash_key: k }))),
-            m("#modal", { onclick: Action.close_log_detail }, m(ActionLogDetail))]
+    return m(".pure-u-5-5#roll_log", { onclick: Action.show_log_detail },
+             m("#modal", { onclick: Action.close_log_detail }, m(ActionLogDetail)),
+             Action.log.map(k => m(ActionLogRow, { hash_key: k })))
   }
 }
 export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView, ActionRollLog }

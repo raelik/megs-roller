@@ -45,7 +45,7 @@ var Main = {
   },
   view: function(vnode) {
     var check = Main.check_action_field
-    return [ m(".pure-g",
+    return m(".pure-g",
       m(".pure-u-1-4.centered", m(ActionClearButton)),
       m(".pure-u-1-2.centered", m("h2", "MEGS Roller")),
       m(".pure-u-1-4.centered.right-buttons", m(ActionRollButtons)),
@@ -73,8 +73,8 @@ var Main = {
       ),
       m(ActionResolvedView),
       m(LoginBarView),
-      (Util.show_log() ? m(ActionRollLog) : '')
-    )]
+      (Util.show_log() ? [m(".pure-u-5-5.centered#roll_log_header", m.trust("———————— &nbsp;Recent Rolls&nbsp; ————————")),
+                          m(ActionRollLog)] : ''))
   }
 }
 
