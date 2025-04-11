@@ -1,6 +1,9 @@
 require 'openssl'
 require 'megs/handlers/login'
 require 'megs/db'
+require 'discordrb/webhooks'
+require 'numbers_and_words'
+require 'concurrent/executor/thread_pool_executor'
 
 module MEGS
   module Handlers
@@ -12,6 +15,9 @@ module MEGS
       MEGS_KEYS = %i(user char av ov ov_cs av_index ov_index ev rv rv_cs
                      ev_index rv_index target target total cs raps).freeze
 
+      IMG_BASE_URL = 'https://raw.githubusercontent.com/raelik/megs-roller/refs/heads/roll_log_and_character_db/public/img/'.freeze
+      @discord = nil
+      @pool = Concurrent::ThreadPoolExecutor.new(min_threads: 5, max_threads: 5, max_queue: 1, fallback_policy: :caller_runs)
       class << self
         def generate_signature(secret, payload)
           OpenSSL::HMAC.hexdigest(OpenSSL::Digest.new('sha256'), secret, payload)
@@ -23,6 +29,11 @@ module MEGS
 
         def missing_params(params)
           params['clear'] ? [] : self::REQUIRED_PARAMS.select { |k| params[k].nil? }
+        end
+
+        attr_reader :discord, :pool
+        def setup(webhook_url)
+          @discord = Discordrb::Webhooks::Client.new(url: webhook_url)
         end
       end
 
@@ -92,9 +103,42 @@ module MEGS
       end
 
       def log_roll
-        MEGS::DB[:rolls].changeset(:create, { timestamp: (Time.now.to_f * 10000000).to_i, session_id: session.id.to_s,
-                                              user_id: megs[:user], character_id: megs[:char] == 0 ? nil : megs[:char],
-                                              rolls: session[:current_rolls] }.merge(log_fields)).commit if session
+        if session
+          timestamp = (Time.now.to_f * 10000000).to_i
+          MEGS::DB[:rolls].changeset(:create, { timestamp: timestamp, session_id: session.id.to_s,
+                                                user_id: megs[:user], character_id: megs[:char] == 0 ? nil : megs[:char],
+                                                rolls: session[:current_rolls] }.merge(log_fields)).commit
+          send_to_discord(timestamp)
+        end
+      end
+
+      def send_to_discord(timestamp)
+        MEGS::Handlers::Base.pool.post do
+          r = MEGS::DB[:rolls].by_pk(timestamp, session.id.to_s).combine(:user, :character).
+                               node(:character) { |c| c.combine(:user) }.one
+          success = r.success
+          an_or_a = (r.total.to_words[0] == 'e' ? 'an' : 'a')
+
+          MEGS::Handlers::Base.discord&.execute do |builder|
+            builder.content = "#{r.user.name} attempted a *Dice Action*."
+            builder.add_embed do |embed|
+              embed.author = Discordrb::Webhooks::EmbedAuthor.new(
+                name: r.character&.name || r.user.name,
+                icon_url: IMG_BASE_URL + (success ? 'success' : 'failure') + '.png')
+              embed.title     = "( *owned by #{r.character&.user&.name}* )" if r.character && r.user.admin && r.character.user_id != r.user.id
+              embed.color     = success ? '#25ae88' : '#d75a4a'
+              embed.thumbnail = Discordrb::Webhooks::EmbedThumbnail.new(url: IMG_BASE_URL + '2d10.png')
+              embed.timestamp = Time.at(timestamp / 10000000.0)
+              embed.description = "rolled #{an_or_a} **#{r.total}** vs. a target number of **#{r.target}**" +
+                                   (success ? ", earning **#{r.cs}** *Column Shifts*.\n" : ".\n") +
+                                  "[ *AV **#{r.av}** against OV **#{r.ov}**" +
+                                   (r.ov_cs.to_i == 0 ? '* ]' : ", **#{r.ov_cs}** OV CS #{r.ov_cs < 0 ? 'Penalty' : 'Bonus'}* ]") +
+                                  "\n  \n" + (success ? "**RAPs: #{r.raps}**\n[ *EV **#{r.ev}** against RV **#{r.rv}**" +
+                                   (r.rv_cs.to_i == 0 ? '* ]' : ", **#{r.rv_cs}** RV CS #{r.rv_cs < 0 ? 'Penalty' : 'Bonus'}* ]") + "\n  \n" : '') +
+                                  "**Dice Rolled: #{r.rolls.flatten.join(', ')}**"
+            end
+          end
+        end
       end
 
       def log_fields

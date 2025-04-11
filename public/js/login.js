@@ -1,34 +1,17 @@
-import { Util, Action } from "/js/action.js"
+import { Util } from "/js/util.js"
+import { Action } from "/js/action.js"
 
 var Login = {
   data: {},
   processing: false,
   end_processing: () => { Login.processing = false },
-  logged_in: () => { return Object.keys(Login.data).length !== 0 },
+  logged_in: () => { return Util.get_cookie('sess') },
+  is_admin: () => { Login.logged_in() && Login.data?.user?.admin },
   timeout_interval: null,
+  last_request: null,
   server_key: new JSEncrypt(),
   keys: { priv: new JSEncrypt(),
           pub: new JSEncrypt() },
-  do_get_request: function(url, headers, cb, final_cb) {
-    var root = document.body
-    root.style.cursor = "wait"
-
-    Promise.all([
-      m.request({
-        method: "GET",
-        url: url,
-	headers: Object.assign(headers, { 'X-MEGS-Session-Signature': Login.sign() })
-      })
-      .then(function(data) {
-        if(cb) { cb(data) }
-      })
-    ])
-    .catch(err => null)
-    .finally(function() {
-      root.style.cursor = "auto"
-      if(final_cb) { final_cb() }
-    })
-  },
   setup_timeout: function() {
     // Run the check every 2 minutes
     if(Login.timeout_interval == null) {
@@ -40,13 +23,14 @@ var Login = {
   },
   check_timeout: function() {
     // Time out after 10 minutes of inactivity
-    if((Date.now() - Action.last_request) > 600000) {
+    if((Date.now() - Login.last_request) > 600000) {
       Login.logout()
+      m.redraw()
     }
   },
-  setup: function(vnode) {
+  setup: function() {
+    Util.login = Login
     Login.processing = true
-    Action.login = Login
     var stored_private = localStorage.getItem("private_key")
     var stored_public  = localStorage.getItem("public_key")
     if(stored_private && stored_public) {
@@ -59,7 +43,7 @@ var Login = {
       localStorage.setItem("public_key", pub) 
       Login.keys.pub.setPublicKey(pub)
     }
-    Login.do_get_request('/login', {}, function(data) {
+    Util.do_get_request('/login', {}, {}, function(data) {
       Login.server_key.setPublicKey(data.key)
       // There should be a host key check here, to alert the user if the key changed.
       localStorage.setItem("server_key", Login.server_key.getPublicKey())
@@ -128,7 +112,7 @@ var Login = {
       Login.processing = true
       Action.clear(null, function() {
         Login.data = {}
-        Login.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, Login.clear_timeout, Login.end_processing)
+        Util.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, {}, Login.clear_timeout, Action.do_logout)
       })
     }
   },
@@ -146,7 +130,7 @@ var Login = {
 
 var CharacterOptions = {
   view: function() {
-    return Object.keys(Login.data.chars).sort().map(function(char_id) {
+    return Object.keys(Login.data.chars ?? {}).sort().map(function(char_id) {
       return m("option", { value: char_id }, Login.data.chars[char_id])
     })
   }

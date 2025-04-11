@@ -23,4 +23,5 @@ use Rack::TryStatic, urls: [''], root: 'public', index: 'index.html', try: ['.ht
 
 
 MEGS::DB.configure(ENV['MEGS_DATABASE'] || config['database'])
+MEGS::Handlers::Base.setup(ENV['MEGS_WEBHOOK_URL'] || config['webhook_url'])
 run MEGS::Server.new(config)

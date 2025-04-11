@@ -1,9 +1,3 @@
-@media only screen and (min-width: 500px) {
-  body {
-    width: 500px;
-  }
-}
-
 body {
   padding: 5px;
 }
@@ -15,10 +9,42 @@ body > .pure-g {
 
 html, button, input, select, textarea,
 .pure-g [class *= "pure-u"] {
-  /* Set your content font stack here: */
-  font-size: 16px;
   font-weight: normal;
   font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+}
+
+@media only screen and (min-width: 500px) {
+  body {
+    width: 500px;
+  }
+
+  html, button, input, select, textarea,
+  .pure-g [class *= "pure-u"] {
+    font-size: 16px;
+  }
+
+  #log_detail table {
+    font-size: 12px;
+  }
+
+  #roll_log {
+    font-size: 12px;
+  }
+}
+
+@media only screen and (max-width: 499px) {
+  html, button, input, select, textarea,
+  .pure-g [class *= "pure-u"] {
+    font-size: 14px;
+  }
+
+  #log_detail table {
+    font-size: 10px;
+  }
+
+  #roll_log {
+    font-size: 10px;
+  }
 }
 
 a.pure-button {
@@ -78,7 +104,6 @@ span.failure, td.failure {
 }
 
 #roll_log {
-  font-size: 12px;
   font-family: monospace;
   overflow-y: auto;
   -webkit-touch-callout: none;
@@ -128,12 +153,12 @@ span.failure, td.failure {
   background-color: #e3e37b;
   position: fixed;
   left: 10px;
+  top: 10px;
   padding: 5px;
   border: 1px solid #444;
 }
 
 #log_detail table {
-  font-size: 12px;
   width: 100%;
   border: 0;
   margin: 0;

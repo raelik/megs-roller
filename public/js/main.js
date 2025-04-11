@@ -1,11 +1,18 @@
-import { Util, Action, ActionClearButton, ActionRollButtons,
-         ActionDataView, ActionResolvedView, ActionRollLog } from "/js/action.js"
+import { Util } from "/js/action.js"
+import { Log, RollLog, LogToggle, DiscordToggle } from "/js/log.js"
+import { Action, ActionClearButton, ActionRollButtons,
+         ActionDataView, ActionResolvedView } from "/js/action.js"
 import { Login, LoginBarView } from "/js/login.js"
 
 var Main = {
-  oninit: Login.setup,
-  login: Login,
-  action: Action,
+  oninit: function(vnode) {
+    Login.setup()
+    Action.log = Log
+  },
+  util: Util,     // <--------------------------
+  login: Login,   // <- These are only set for
+  log: Log,       // <- debug purposes.
+  action: Action, // <--------------------------
   oncreate: function(vnode) {
     document.getElementById('av').focus({ focusVisible: true })
   },
@@ -17,10 +24,10 @@ var Main = {
       viewport.content = 'width=device-width';
     }
 
-    if(Action.selected_row == null && document.activeElement.tagName != 'INPUT') {
+    if(Log.selected == null && document.activeElement.tagName != 'INPUT') {
       if(Util.show_roll()) {
         document.getElementById('av').focus()
-      } else if (Action.data.success && !Action.data.resolved) {
+      } else if (Util.data.success && !Util.data.resolved) {
         document.getElementById('ev').focus()
       }
     }
@@ -30,7 +37,7 @@ var Main = {
   },
   effect_field_attrs: function(id) {
     var attrs = Main.text_field_attrs(id)
-    return Object.assign(attrs, Action.data.resolved ? { disabled: true } : {})
+    return Object.assign(attrs, Util.data.resolved ? { disabled: true } : {})
   },
   action_field_attrs: function(id) {
     var attrs = Main.text_field_attrs(id)
@@ -38,16 +45,18 @@ var Main = {
   },
   result_style: function() {
     return Util.show_result() ? ("text-align: center; margin-bottom: 10px; color: white; background-color: " +
-                                 (Action.data.success ? "green" : "red")) : "display: none"
+                                 (Util.data.success ? "green" : "red")) : "display: none"
   },
   result_text: function() {
-    return Util.show_result() ? ("Action " + (Action.data.success ? "Succeeded!" : "FAILED.")) : ""
+    return Util.show_result() ? ("Action " + (Util.data.success ? "Succeeded!" : "FAILED.")) : ""
   },
   view: function(vnode) {
     var check = Main.check_action_field
     return m(".pure-g",
       m(".pure-u-1-4.centered", m(ActionClearButton)),
-      m(".pure-u-1-2.centered", m("h2", "MEGS Roller")),
+      m(".pure-u-1-2.centered", (Login.is_admin() ? m(LogToggle) : ''),
+                                m("h2", "MEGS Roller"),
+                                (Login.logged_in() ? m(DiscordToggle) : '')),
       m(".pure-u-1-4.centered.right-buttons", m(ActionRollButtons)),
       m(".pure-u-5-5",
         m(".pure-u-1-3.centered", "AV"),
@@ -74,7 +83,7 @@ var Main = {
       m(ActionResolvedView),
       m(LoginBarView),
       (Util.show_log() ? [m(".pure-u-5-5.centered#roll_log_header", m.trust("———————— &nbsp;Recent Rolls&nbsp; ————————")),
-                          m(ActionRollLog)] : ''))
+                          m(RollLog)] : ''))
   }
 }
 
