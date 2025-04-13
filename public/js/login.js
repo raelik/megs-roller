@@ -6,7 +6,7 @@ var Login = {
   data: {},
   processing: false,
   end_processing: () => { Login.processing = false },
-  logged_in: () => { return Login.enabled && Util.get_cookie('sess') },
+  logged_in: () => { return Util.get_cookie('sess') },
   is_admin: () => { return Login.logged_in() && Login.data?.user?.admin },
   timeout_interval: null,
   last_request: null,
@@ -84,7 +84,7 @@ var Login = {
     })
   },
   login: function(e) {
-    if(!Login.processing) {
+    if(Login.enabled && !Login.processing) {
       Login.processing = true
       Action.clear(null, function() {
         var user = document.getElementById('username')
