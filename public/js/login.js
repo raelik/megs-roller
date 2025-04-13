@@ -2,18 +2,16 @@ import { Util } from "/js/util.js"
 import { Action } from "/js/action.js"
 
 var Login = {
+  enabled: false,
   data: {},
   processing: false,
   end_processing: () => { Login.processing = false },
-  logged_in: () => { return Util.get_cookie('sess') },
+  logged_in: () => { return Login.enabled && Util.get_cookie('sess') },
   is_admin: () => { return Login.logged_in() && Login.data?.user?.admin },
   timeout_interval: null,
   last_request: null,
   logging: true,
   discord: true,
-  server_key: new JSEncrypt(),
-  keys: { priv: new JSEncrypt(),
-          pub: new JSEncrypt() },
   setup_timeout: function() {
     // Run the check every 2 minutes
     if(Login.timeout_interval == null) {
@@ -32,34 +30,18 @@ var Login = {
   setup: function() {
     Util.login = Login
     Login.processing = true
-    var stored_private = localStorage.getItem("private_key")
-    var stored_public  = localStorage.getItem("public_key")
-    if(stored_private && stored_public) {
-      Login.keys.priv.setPrivateKey(stored_private)
-      Login.keys.pub.setPublicKey(stored_public)
-    } else {
-      Login.keys.priv.getKey()
-      var pub = Login.keys.priv.getPublicKey()
-      localStorage.setItem("private_key", Login.keys.priv.getPrivateKey())
-      localStorage.setItem("public_key", pub) 
-      Login.keys.pub.setPublicKey(pub)
-    }
     Util.do_get_request('/login', {}, {}, function(data) {
-      Login.server_key.setPublicKey(data.key)
-      // There should be a host key check here, to alert the user if the key changed.
-      localStorage.setItem("server_key", Login.server_key.getPublicKey())
-      if(data.session) {
-        Login.data = data.session
-        Login.setup_timeout()
+      if(data.enabled) {
+        Login.enabled = true
+        if(data.session) {
+          Login.data = data.session
+          Login.logging = Login.data.logging
+          Login.discord = Login.data.discord
+          Login.setup_timeout()
+        }
       }
       Login.end_processing()
     })
-  },
-  encrypt: function(data) {
-    return Login.server_key.encrypt(Object.keys(data).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&'))
-  },
-  sign: function() {
-    return Login.keys.priv.sign(document.cookie, CryptoJS.SHA256, "sha256")
   },
   do_timeout: function() {
     Action.do_logout()
@@ -73,9 +55,8 @@ var Login = {
       m.request({
         method: "POST",
         url: "/login",
-        body: { data: Login.encrypt(body) },
-        headers: { 'Content-Type': 'application/json',
-                   'X-MEGS-Session-Key': btoa(Login.keys.pub.getPublicKey()) },
+        body: body,
+        headers: { 'Content-Type': 'application/json' }
       })
       .then(function(data) {
         Login.data = data
@@ -120,8 +101,7 @@ var Login = {
         // e is normally an Event, but during a login timeout, it's used as a boolean to indicate
         // that the Login.do_timeout callback should be used. It calls Action.do_logout AND does
         // a redraw. This is necessary because a timeout happens outside of the Mithril context.
-        Util.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, {},
-                            Login.clear_timeout, (e === true ? Login.do_timeout : Action.do_logout))
+        Util.do_get_request('/logout', {}, {}, Login.clear_timeout, (e === true ? Login.do_timeout : Action.do_logout))
       })
     }
   },

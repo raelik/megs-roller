@@ -43,7 +43,7 @@ module MEGS
         @request = req
         @headers = { 'content-type' => 'application/json' }
         @megs    = {}
-        @session = Login.validate_session(req)
+        @session = Login.enabled && Login.validate_session(req)
         Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
         raise Error.new(401, "Cookie signature invalid") unless validate_cookie
       end
@@ -67,7 +67,7 @@ module MEGS
       def validate_cookie
         return true if cookies['sig'].nil? && cookies['megs'].nil?
         return true if cookies['sig'].empty? && cookies['megs'].empty?
-        signature  = cookies['sig']
+        signature = cookies['sig']
         check_sig = generate_signature(cookies['megs'])
         Rack::Utils.secure_compare(signature, check_sig) && (self.megs = cookies['megs'])
       end
@@ -148,7 +148,7 @@ module MEGS
 
       # passthrough methods
       def generate_signature(payload)
-        self.class.generate_signature(config['secret'], payload)
+        self.class.generate_signature(config['secret'], (session ? session.id.to_s : '') + payload)
       end
 
       def missing_params

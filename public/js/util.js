@@ -72,10 +72,9 @@ var Util = {
     }
     return decodeURIComponent(dc.substring(begin + prefix.length, end))
   },
-  do_get_request: function(url, h, params, cb, final_cb) {
+  do_get_request: function(url, headers, params, cb, final_cb) {
     var root = document.body
     root.style.cursor = "wait"
-    var headers = Object.assign(h, Util.login.logged_in() ? { 'X-MEGS-Session-Signature': Util.login.sign() } : {})
 
     Promise.all([
       m.request({

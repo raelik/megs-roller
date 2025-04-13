@@ -20,7 +20,7 @@ rackup      DefaultRackup if defined?(DefaultRackup)
 environment ENV['RACK_ENV'] || 'development'
 
 on_worker_boot do
-  MEGS::DB.connect
+  MEGS::DB.connect if MEGS::DB.config
 end
 
 on_worker_shutdown do

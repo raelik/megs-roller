@@ -79,7 +79,7 @@ var Main = {
         m(".pure-u-1-3.centered", m("input", Main.effect_field_attrs('rv_cs')))
       ),
       m(ActionResolvedView),
-      m(LoginBarView),
+      (Util.login.enabled ? m(LoginBarView) : ''),
       (Util.show_log() ? [m(".pure-u-5-5.centered#roll_log_header",
                             m(DiscordToggle), (Login.is_admin() ? m(LogToggle) : ''),
                             m.trust("—————— &nbsp;Recent Rolls&nbsp; ——————")),
