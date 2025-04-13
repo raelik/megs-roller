@@ -17,9 +17,9 @@ The `config.ru` file provided is intended to be used with the `rackup` command a
 
 The only required setting is `MEGS_SECRET`/`secret`. To enable the login feature, which in turn allows for roll logging and pushing rolls to a Discord webhook, both the `MEGS_DATABASE`/`database` and `MEGS_MEMCACHE`/`memcache_server` must be set. `MEGS_WEBHOOK`/`webhook_url` is optional, but also requires `MEGS_DATABASE`/`database`, since it is an extension of the logging feature, which requires users and characters to be defined. The default example SQLite database configured in the example config.yaml is NOT recommended for use on Heroku, for the reasons outline here: [SQLite on Heroku](https://devcenter.heroku.com/articles/sqlite3)
 
-**Additionally**, there is a `MEGS_LOGIN`/`login` boolean setting that can be used to explicitly disable the login system. It is enabled by default. This is for temporarily disabling logins for maintenance purposes.
+**Additionally**, there is a `MEGS_LOGIN`/`login` boolean setting that can be used to explicitly disable the login system. It is enabled by default (`MEGS_DATABASE`/`database` and `MEGS_MEMCACHE`/`memcache_server` must still be set). This is for temporarily disabling logins for maintenance purposes.
 
-**DO NOT** enable the login feature unless you are running your application over HTTPS, or on a secure private network. The usernames and passwords are sent in the clear.
+__**DO NOT**__ enable the login feature unless you are running your application over HTTPS, or on a secure private network. The usernames and passwords are sent in the clear.
 
 ## Using MEGS Roller
 Actual usage of the MEGS Roller web application should be fairly self-explanatory, but some features and functionality bear explanation:

@@ -8,19 +8,21 @@ require 'megs/db'
 require 'argon2id'
 require 'highline/import'
 
-config = YAML.load_file('config/config.yaml')
+config = YAML.load_file('config/config.yaml') rescue { 'database' => ENV['MEGS_DATABASE'] }
 
 namespace :db do
   desc 'Performs any necessary initialization of the database.'
   task :setup do
-    ROM::SQL::RakeSupport.env = ROM.container(:sql, config['database'])
+    ROM::SQL::RakeSupport.env = ROM.container(:sql, config['database']) if config['database']
   end
 end
 
 namespace :megs do
   task :db_connect do |task|
-    MEGS::DB.configure(config['database'])
-    MEGS::DB.connect
+    if config['database']
+      MEGS::DB.configure(config['database'])
+      MEGS::DB.connect
+    end
   end
 
   desc 'Lists the users in the database.'
