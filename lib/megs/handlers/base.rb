@@ -43,7 +43,7 @@ module MEGS
         @request = req
         @headers = { 'content-type' => 'application/json' }
         @megs    = {}
-        @session = Login.validate_session(req)
+        @session = Login.enabled && Login.validate_session(req)
         Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
         raise Error.new(401, "Cookie signature invalid") unless validate_cookie
       end

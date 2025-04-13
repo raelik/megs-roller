@@ -2,6 +2,7 @@ import { Util } from "/js/util.js"
 import { Action } from "/js/action.js"
 
 var Login = {
+  enabled: false,
   data: {},
   processing: false,
   end_processing: () => { Login.processing = false },
@@ -48,9 +49,14 @@ var Login = {
       Login.server_key.setPublicKey(data.key)
       // There should be a host key check here, to alert the user if the key changed.
       localStorage.setItem("server_key", Login.server_key.getPublicKey())
-      if(data.session) {
-        Login.data = data.session
-        Login.setup_timeout()
+      if(data.enabled) {
+        Login.enabled = true
+        if(data.session) {
+          Login.data = data.session
+          Login.logging = Login.data.logging
+          Login.discord = Login.data.discord
+          Login.setup_timeout()
+        }
       }
       Login.end_processing()
     })
@@ -103,7 +109,7 @@ var Login = {
     })
   },
   login: function(e) {
-    if(!Login.processing) {
+    if(Login.enabled && !Login.processing) {
       Login.processing = true
       Action.clear(null, function() {
         var user = document.getElementById('username')

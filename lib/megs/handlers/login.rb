@@ -24,6 +24,11 @@ module MEGS
           end
         end
 
+        def enabled
+          MEGS::DB.config && (config['memcache_server']) &&
+          (config['login'].nil? || config['login'])
+        end
+
         def validate_session(request)
           cookies = request.cookies
           if id = cookies['sess']
@@ -64,13 +69,14 @@ module MEGS
       def call
         s, h, b = case [request.request_method, request.path_info]
           when ['GET',  '/login']
-            s = self.class.validate_session(request)
+            s = enabled && self.class.validate_session(request)
             Rack::Utils.delete_cookie_header!(headers, 'sess') if s == false
-            update_session(s) if params['d'] || params['l']
-            [200, headers, ((params['d'] || params['l'] ? {} : { key: keys['public'] }).
-                            merge(s ? { session: get_session_data(s) } : {}).to_json)]
+            update_session(s) if s && (params['d'] || params['l'])
+            default = { enabled: enabled }.merge(params['d'] || params['l'] ? {} : { key: keys['public'] })
+            [200, headers, (default.merge(s ? { session: get_session_data(s) } : {}).to_json)]
           when ['POST', '/login']
-            data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil
+            data = enabled && (Hash[URI.decode_www_form(keys['private'].
+                                        private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil)
             user_query = data && MEGS::DB[:users].by_username(data['u']).combine(:characters)
 
             if data && (user = user_query.first) && user.password.is_password?(data['p']) &&
@@ -81,10 +87,10 @@ module MEGS
               raise Error.new(401, "Unauthorized")
             end
           when ['GET',  '/logout']
-            s = self.class.validate_session(request)
+            s = enabled && self.class.validate_session(request)
             s && s.options[:drop] = true
             Rack::Utils.delete_cookie_header!(headers, 'sess')
-            [204, headers, [{ logging: true, discord: true }.to_json]]
+            [200, headers, { logging: true, discord: true }.to_json]
           else
             [404, {}, "Not Found"]
         end
@@ -104,6 +110,10 @@ module MEGS
 
       def params
         request.params
+      end
+
+      def enabled
+        self.class.enabled
       end
 
       private
