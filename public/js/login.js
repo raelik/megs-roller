@@ -6,9 +6,11 @@ var Login = {
   processing: false,
   end_processing: () => { Login.processing = false },
   logged_in: () => { return Util.get_cookie('sess') },
-  is_admin: () => { Login.logged_in() && Login.data?.user?.admin },
+  is_admin: () => { return Login.logged_in() && Login.data?.user?.admin },
   timeout_interval: null,
   last_request: null,
+  logging: true,
+  discord: true,
   server_key: new JSEncrypt(),
   keys: { priv: new JSEncrypt(),
           pub: new JSEncrypt() },
@@ -24,8 +26,7 @@ var Login = {
   check_timeout: function() {
     // Time out after 10 minutes of inactivity
     if((Date.now() - Login.last_request) > 600000) {
-      Login.logout()
-      m.redraw()
+      Login.logout(true)
     }
   },
   setup: function() {
@@ -59,6 +60,10 @@ var Login = {
   },
   sign: function() {
     return Login.keys.priv.sign(document.cookie, CryptoJS.SHA256, "sha256")
+  },
+  do_timeout: function() {
+    Action.do_logout()
+    m.redraw()
   },
   do_login_request: function(body, cb, final_cb) {
     var root = document.body
@@ -112,7 +117,11 @@ var Login = {
       Login.processing = true
       Action.clear(null, function() {
         Login.data = {}
-        Util.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, {}, Login.clear_timeout, Action.do_logout)
+        // e is normally an Event, but during a login timeout, it's used as a boolean to indicate
+        // that the Login.do_timeout callback should be used. It calls Action.do_logout AND does
+        // a redraw. This is necessary because a timeout happens outside of the Mithril context.
+        Util.do_get_request('/logout', { 'X-MEGS-Session-Signature': Login.sign() }, {},
+                            Login.clear_timeout, (e === true ? Login.do_timeout : Action.do_logout))
       })
     }
   },

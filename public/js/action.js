@@ -3,14 +3,12 @@ import { Util } from "/js/util.js"
 var Action = {
   log: null,
   processing: false,
-  do_log: true,
-  do_discord: true,
   end_processing: function() {
     Action.processing = false
     document.activeElement.blur()
   },
   do_logout: function(delayed) {
-    /* This is normally executed with a callback to Action.clear, which already
+    /* This is normally executed within a callback to Action.clear, which already
      * handles the Action.processing flag. If this needs to delay because of the
      * roll log updater, this context will be lost and it will need to do its
      * own Action.processing flag handling.
@@ -119,5 +117,4 @@ var ActionResolvedView = {
   }
 }
 
-export { Util, Action, ActionClearButton, ActionRollButtons,
-         ActionDataView, ActionResolvedView }
+export { Util, Action, ActionClearButton, ActionRollButtons, ActionDataView, ActionResolvedView }

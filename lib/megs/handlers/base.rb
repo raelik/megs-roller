@@ -57,6 +57,7 @@ module MEGS
         @megs[:last_roll] = last
         @megs[:resolved] = true unless resolved.to_s.empty?
         @megs[:success]  = (success == 'true') unless success.to_s.empty?
+        @megs
       end
 
       def megs_cookie
@@ -103,12 +104,12 @@ module MEGS
       end
 
       def log_roll
-        if session
+        if session&.dig(:logging)
           timestamp = (Time.now.to_f * 10000000).to_i
           MEGS::DB[:rolls].changeset(:create, { timestamp: timestamp, session_id: session.id.to_s,
                                                 user_id: megs[:user], character_id: megs[:char] == 0 ? nil : megs[:char],
                                                 rolls: session[:current_rolls] }.merge(log_fields)).commit
-          send_to_discord(timestamp)
+          send_to_discord(timestamp) if session[:discord]
         end
       end
 

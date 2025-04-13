@@ -45,6 +45,16 @@ module MEGS
         end
       end
 
+      def update_session(s)
+        discord, logging = params.values_at('d', 'l').map(&:to_s)
+        if discord != '' && s[:discord] != discord
+          s[:discord] = (discord == 'true')
+        end
+        if logging != '' && s[:user][:admin] && s[:logging] != logging
+          s[:logging] = (logging == 'true')
+        end
+      end
+
       attr_reader :config, :request, :headers
       def initialize(_c, req)
         @request = req
@@ -54,9 +64,11 @@ module MEGS
       def call
         s, h, b = case [request.request_method, request.path_info]
           when ['GET',  '/login']
-            session = self.class.validate_session(request)
-            Rack::Utils.delete_cookie_header!(headers, 'sess') if session == false
-            [200, headers, ({ key: keys['public'] }.merge(session ? { session: get_session_data(session) } : {}).to_json)]
+            s = self.class.validate_session(request)
+            Rack::Utils.delete_cookie_header!(headers, 'sess') if s == false
+            update_session(s) if params['d'] || params['l']
+            [200, headers, ((params['d'] || params['l'] ? {} : { key: keys['public'] }).
+                            merge(s ? { session: get_session_data(s) } : {}).to_json)]
           when ['POST', '/login']
             data = Hash[URI.decode_www_form(keys['private'].private_decrypt(Base64.decode64(request.POST['data'])))] rescue nil
             user_query = data && MEGS::DB[:users].by_username(data['u']).combine(:characters)
@@ -72,7 +84,7 @@ module MEGS
             s = self.class.validate_session(request)
             s && s.options[:drop] = true
             Rack::Utils.delete_cookie_header!(headers, 'sess')
-            [204, headers, []]
+            [204, headers, [{ logging: true, discord: true }.to_json]]
           else
             [404, {}, "Not Found"]
         end
@@ -90,6 +102,10 @@ module MEGS
         self.class.keys
       end
 
+      def params
+        request.params
+      end
+
       private
 
       def users
@@ -100,7 +116,8 @@ module MEGS
         s.options[:skip] = false
         cipher = OpenSSL::Cipher::AES.new(128, :CFB)
         s.merge!(key: key, user: user.to_h, current_rolls: [],
-                 cipher: { key: cipher.random_key, iv: cipher.random_iv })
+                 cipher: { key: cipher.random_key, iv: cipher.random_iv },
+                 logging: true, discord: true)
         chars = (user.admin ? MEGS::DB[:characters].combine(:user).order(:user_id, :id) : user.characters).to_a
         s[:chars] =
           Hash[chars.map do |char|
@@ -112,7 +129,7 @@ module MEGS
        { user: s[:user].filter { |k| %i(id username name admin).include?(k) },
          chars: { 0 => s[:user][:name] }.merge(Hash[s[:chars].map do |k, v|
            [ k, v[:name] + (s[:user][:admin] ? " (#{v[:user][:name]})" : '') ]
-         end]) }
+         end]), logging: s[:logging], discord: s[:discord] }
       end
     end
   end

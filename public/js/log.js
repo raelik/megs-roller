@@ -6,7 +6,10 @@ var Log = {
   processing: false,
   interval: null,
   init_data: (l) => { Log.set_data(false, l) },
-  update_data: (l) => { Log.set_data(true, l) },
+  update_data: function(l) {
+    Log.set_data(true, l)
+    m.redraw()
+  },
   set_data: function(update, l) {
     l.forEach((r) => { Log.data[r.hash_key] = r })
     if(update) {
@@ -49,7 +52,6 @@ var Log = {
         var key = Log.idx[0]
         var headers = (latest && key ? { 'X-MEGS-Search-Key': Log.data[key].search_key } : {})
         Util.do_get_request('/roll_log', headers, {}, (latest ? Log.update_data : Log.init_data), cb)
-        if(latest) { m.redraw() }
       }
     } else if(Log.interval) {
       clearInterval(Log.interval)
@@ -76,7 +78,6 @@ var Log = {
       e.redraw = false
       window.setTimeout(Log.show_detail, 100, e, true); /* this checks the flag every 100 milliseconds*/
     } else {
-      e.redraw = true
       if(e.target.id != 'roll_log' && e.target) {
         var target   = (e.target.id == '' ? e.target.parentElement : e.target)
         var roll_log = target.parentElement
@@ -108,6 +109,31 @@ var Log = {
     e.stopPropagation()
     if(e.target == modal || e.target == log_close) {
       Log.selected = null
+    }
+  },
+  do_toggle: function(d) {
+    ['logging', 'discord'].forEach(function(k) {
+      if(k in this) {
+        Util.login.data[k] = d.session[k]
+        Util.login[k] = d.session[k]
+      }
+    })
+  },
+  toggle: function(e, manual_redraw) {
+    var button = (e.target.id == 'log_toggle' ? 'logging' : 'discord')
+    if(button == 'discord' || Util.login.is_admin()) {
+      if(Log.processing === true) {
+        e.redraw = false
+        window.setTimeout(Log.toggle, 100, e, true); /* this checks the flag every 100 milliseconds*/
+      } else {
+        var params = {}
+        Util.login[button] = !Util.login[button];
+        params[button.charAt(0)] = Util.login[button]
+        Util.do_get_request('/login', {}, params, (manual_redraw ? function(d) {
+          Log.do_toggle(d)
+          m.redraw()
+        } : Log.do_toggle))
+      }
     }
   }
 }
@@ -173,13 +199,13 @@ var RollLog = {
 
 var LogToggle = {
   view: function(vnode) {
-    return m('')
+    return m('img#log_toggle.'+(Util.login.logging ? '' : 'disabled'), { src: '/img/log.png', onclick: Log.toggle })
   }
 }
 
 var DiscordToggle = {
   view: function(vnode) {
-    return m('')
+    return m('img#discord_toggle.'+(Util.login.discord ? '' : 'disabled'), { src: '/img/discord.png', onclick: Log.toggle })
   }
 }
 

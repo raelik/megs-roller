@@ -54,9 +54,7 @@ var Main = {
     var check = Main.check_action_field
     return m(".pure-g",
       m(".pure-u-1-4.centered", m(ActionClearButton)),
-      m(".pure-u-1-2.centered", (Login.is_admin() ? m(LogToggle) : ''),
-                                m("h2", "MEGS Roller"),
-                                (Login.logged_in() ? m(DiscordToggle) : '')),
+      m(".pure-u-1-2.centered", m("h2", "MEGS Roller")),
       m(".pure-u-1-4.centered.right-buttons", m(ActionRollButtons)),
       m(".pure-u-5-5",
         m(".pure-u-1-3.centered", "AV"),
@@ -82,7 +80,9 @@ var Main = {
       ),
       m(ActionResolvedView),
       m(LoginBarView),
-      (Util.show_log() ? [m(".pure-u-5-5.centered#roll_log_header", m.trust("———————— &nbsp;Recent Rolls&nbsp; ————————")),
+      (Util.show_log() ? [m(".pure-u-5-5.centered#roll_log_header",
+                            m(DiscordToggle), (Login.is_admin() ? m(LogToggle) : ''),
+                            m.trust("—————— &nbsp;Recent Rolls&nbsp; ——————")),
                           m(RollLog)] : ''))
   }
 }
