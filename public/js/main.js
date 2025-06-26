@@ -24,7 +24,7 @@ var Main = {
       viewport.content = 'width=device-width';
     }
 
-    if(Log.selected == null && document.activeElement.tagName != 'INPUT') {
+    if(Log.selected == null && !['INPUT','SELECT'].includes(document.activeElement.tagName)) {
       if(Util.show_roll()) {
         document.getElementById('av').focus()
       } else if (Util.data.success && !Util.data.resolved) {
