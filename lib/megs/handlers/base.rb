@@ -96,8 +96,6 @@ module MEGS
           [s, h, b]
         end
       rescue NoMethodError => e
-        puts "ERROR: #{e.message}"
-        puts "BACKTRACE: #{e.backtrace.join("\n")}"
         raise Error.new(405, "Method #{request_method} not allowed for #{path_info}")
       rescue Error => e
         @headers = {}
@@ -106,7 +104,7 @@ module MEGS
       end
 
       def log_roll
-        if session&.dig(:logging)
+        if session && session.dig(:logging)
           timestamp = (Time.now.to_f * 10000000).to_i
           MEGS::DB[:rolls].changeset(:create, { timestamp: timestamp, session_id: session.id.to_s,
                                                 user_id: megs[:user], character_id: megs[:char] == 0 ? nil : megs[:char],
