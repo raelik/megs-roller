@@ -96,6 +96,8 @@ module MEGS
           [s, h, b]
         end
       rescue NoMethodError => e
+        puts "ERROR: #{e.message}"
+        puts "BACKTRACE: #{e.backtrace.join("\n")}"
         raise Error.new(405, "Method #{request_method} not allowed for #{path_info}")
       rescue Error => e
         @headers = {}
