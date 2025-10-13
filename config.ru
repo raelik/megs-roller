@@ -24,7 +24,7 @@ use(Rack::Session::Dalli,
 
 use Middleware::JsonRequestParser
 use Rack::ContentLength
-use Rack::TryStatic, urls: [''], root: 'public', index: 'index.html', try: ['.html','.css','.js','.ico']
+use Rack::TryStatic, urls: [''], root: 'public', index: 'index.html', try: ['.html','.css','.js','.ico','.png']
 
 webhook_url = ENV['MEGS_WEBHOOK'] || config['webhook_url']
 MEGS::Handlers::Base.setup(webhook_url) if db_config && webhook_url

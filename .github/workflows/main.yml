@@ -16,9 +16,9 @@ jobs:
       - uses: akhileshns/heroku-deploy@v3.14.15
         with:
           heroku_api_key: ${{secrets.HEROKU_API_KEY}}
-          heroku_app_name: "megs-roller"
-          heroku_email: "raelik@gmail.com"
-          healthcheck: "https://megs-roller-b10c3de2770b.herokuapp.com/health"
+          heroku_app_name: ${{secrets.HEROKU_APP_NAME}}
+          heroku_email: ${{secrets.HEROKU_EMAIL}}
+          healthcheck: ${{secrets.HEROKU_APP_URL}}/health
           checkstring: "ok"
           delay: 5
           rollbackonhealthcheckfailed: true
