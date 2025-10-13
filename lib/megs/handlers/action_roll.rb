@@ -71,7 +71,7 @@ module MEGS
             megs.merge!(success: false, total: sum)
             log_roll
           else
-            # Only accept reroll requests if the action params haven't changes and doubles were rolled.
+            # Only accept reroll requests if the action params haven't changed and doubles were rolled.
             if params['reroll'] && !new_action?(av, ov, ov_cs) && last[0] == last[1]
               megs[:total] = megs[:total] + sum
             else

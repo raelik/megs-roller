@@ -104,6 +104,7 @@ module MEGS
       end
 
       def log_roll
+        # This is intentionally NOT using &.dig because session can be a boolean false.
         if session && session.dig(:logging)
           timestamp = (Time.now.to_f * 10000000).to_i
           MEGS::DB[:rolls].changeset(:create, { timestamp: timestamp, session_id: session.id.to_s,

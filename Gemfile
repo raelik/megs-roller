@@ -1,10 +1,10 @@
 source 'https://rubygems.org'
-ruby '3.3.7'
+ruby '3.3.9'
 
 gem 'rack', '~> 3.1.12'
 gem 'rack-contrib', '~> 2.5.0'
 gem 'rackup', '~> 2.2.1'
-gem 'puma', '~> 6.6.0'
+gem 'puma', '~> 7.0.4'
 gem 'rom-sql', '~> 3.7.0'
 gem 'sqlite3', '~> 2.6.0'
 gem 'rake', '~> 13.1.0'
