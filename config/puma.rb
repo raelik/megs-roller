@@ -6,6 +6,7 @@ workers Integer(ENV['WEB_CONCURRENCY'] || 2)
 threads_count = 5
 threads threads_count, threads_count
 log_requests true
+persistent_timeout 95
 
 preload_app!
 
