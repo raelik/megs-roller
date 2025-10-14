@@ -98,6 +98,8 @@ var Login = {
       Login.processing = true
       Action.clear(null, function() {
         Login.data = {}
+        Login.discord = true
+        Login.logging = true
         // e is normally an Event, but during a login timeout, it's used as a boolean to indicate
         // that the Login.do_timeout callback should be used. It calls Action.do_logout AND does
         // a redraw. This is necessary because a timeout happens outside of the Mithril context.
